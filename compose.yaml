@@ -1,0 +1,134 @@
+name: hyperlocal-kitchen
+
+x-runtime: &runtime
+  init: true
+  restart: unless-stopped
+  read_only: true
+  tmpfs:
+    - /tmp:size=64m,mode=1777
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+
+x-core-environment: &core-environment
+  KITCHEN_ENVIRONMENT: development
+  # Host-side Python tools use .env URLs; containers use service hostnames.
+  KITCHEN_DATABASE_URL: postgresql+psycopg://kitchen:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/kitchen
+  KITCHEN_REDIS_URL: redis://redis:6379/0
+  KITCHEN_PENDING_ORDER_MINUTES: ${KITCHEN_PENDING_ORDER_MINUTES:-15}
+  KITCHEN_WORKER_POLL_SECONDS: ${KITCHEN_WORKER_POLL_SECONDS:-5}
+  KITCHEN_PUSH_ENABLED: ${KITCHEN_PUSH_ENABLED:-false}
+  KITCHEN_COOKIE_SECURE: ${KITCHEN_COOKIE_SECURE:-false}
+
+x-oidc-environment: &oidc-environment
+  KITCHEN_OIDC_ISSUER_URL: ${KITCHEN_OIDC_ISSUER_URL:-}
+  KITCHEN_OIDC_ORGANIZATION_ID: ${KITCHEN_OIDC_ORGANIZATION_ID:-}
+  KITCHEN_OIDC_TOKEN_ENDPOINT_AUTH_METHOD: ${KITCHEN_OIDC_TOKEN_ENDPOINT_AUTH_METHOD:-none}
+  KITCHEN_OIDC_GOOGLE_IDP_ID: ${KITCHEN_OIDC_GOOGLE_IDP_ID:-}
+  KITCHEN_OIDC_GITHUB_IDP_ID: ${KITCHEN_OIDC_GITHUB_IDP_ID:-}
+  KITCHEN_USER_BASE_URL: ${KITCHEN_USER_BASE_URL:-http://localhost:18000}
+  KITCHEN_ADMIN_BASE_URL: ${KITCHEN_ADMIN_BASE_URL:-http://localhost:3001}
+  KITCHEN_USER_OIDC_CLIENT_ID: ${KITCHEN_USER_OIDC_CLIENT_ID:-}
+  KITCHEN_ADMIN_OIDC_CLIENT_ID: ${KITCHEN_ADMIN_OIDC_CLIENT_ID:-}
+
+x-user-auth-environment: &user-auth-environment
+  KITCHEN_USER_OIDC_CLIENT_SECRET: ${KITCHEN_USER_OIDC_CLIENT_SECRET:-}
+
+x-backend: &backend
+  <<: *runtime
+  environment: *core-environment
+
+x-ready: &ready
+  postgres:
+    condition: service_healthy
+  redis:
+    condition: service_healthy
+  migrate:
+    condition: service_completed_successfully
+
+x-api-healthcheck: &api-healthcheck
+  test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/ready', timeout=3).close()"]
+  interval: 5s
+  timeout: 4s
+  retries: 5
+  start_period: 15s
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: kitchen
+      POSTGRES_DB: kitchen
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:${KITCHEN_POSTGRES_PORT:-15432}:5432"
+    volumes:
+      - kitchen-db:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD, pg_isready, -U, kitchen, -d, kitchen]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    command: [redis-server, --appendonly, "yes", --appendfsync, everysec, --maxmemory-policy, noeviction]
+    ports:
+      - "127.0.0.1:${KITCHEN_REDIS_PORT:-16379}:6379"
+    volumes:
+      - kitchen-redis:/data
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  migrate:
+    <<: *backend
+    image: hyperlocal-kitchen/migrate:local
+    restart: "no"
+    command: [alembic, upgrade, head]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    <<: *backend
+    image: hyperlocal-kitchen/api:local
+    environment:
+      <<: [*core-environment, *oidc-environment, *user-auth-environment]
+    depends_on: *ready
+    ports:
+      - target: 8000
+        published: "${KITCHEN_API_PORT:-18000}"
+        host_ip: "${KITCHEN_BIND_IP:-0.0.0.0}"
+    healthcheck: *api-healthcheck
+
+  admin-api:
+    <<: *backend
+    image: hyperlocal-kitchen/admin-api:local
+    environment:
+      <<: [*core-environment, *oidc-environment]
+      KITCHEN_ADMIN_OIDC_CLIENT_SECRET: ${KITCHEN_ADMIN_OIDC_CLIENT_SECRET:-}
+      KITCHEN_ADMIN_REQUIRED_ROLE: ${KITCHEN_ADMIN_REQUIRED_ROLE:-platform_admin}
+    command: [uvicorn, kitchen_admin_api.main:app, --host, 0.0.0.0, --port, "8000", --no-proxy-headers, --no-access-log]
+    depends_on: *ready
+    ports:
+      - target: 8000
+        published: "${KITCHEN_ADMIN_API_PORT:-3001}"
+        host_ip: "${KITCHEN_BIND_IP:-0.0.0.0}"
+    healthcheck: *api-healthcheck
+
+  worker:
+    <<: *backend
+    image: hyperlocal-kitchen/worker:local
+    environment:
+      # Session policy validation must match the resident API's settings.
+      <<: [*core-environment, *oidc-environment, *user-auth-environment]
+    command: [kitchen-worker]
+    depends_on: *ready
+
+volumes:
+  kitchen-db:
+  kitchen-redis:

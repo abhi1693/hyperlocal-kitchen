@@ -1,0 +1,21 @@
+[project]
+name = "kitchen-worker"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = ["kitchen-core"]
+
+[build-system]
+requires = ["setuptools>=80"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.package-dir]
+kitchen_worker = "src"
+
+[project.scripts]
+kitchen-worker = "kitchen_worker.main:main"
+
+[tool.setuptools.package-data]
+kitchen_worker = ["py.typed"]
+
+[tool.uv]
+cache-keys = [{ file = "pyproject.toml" }, { file = "src/**/*.py" }, { file = "src/py.typed" }]

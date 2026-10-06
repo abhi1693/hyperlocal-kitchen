@@ -1,0 +1,45 @@
+[project]
+name = "hyperlocal-kitchen"
+version = "0.1.0"
+description = "Society-scoped home kitchen marketplace backend"
+requires-python = ">=3.12"
+dependencies = []
+
+[tool.uv]
+package = false
+
+[tool.uv.config-settings-package]
+kitchen-core = { editable_mode = "strict" }
+kitchen-http = { editable_mode = "strict" }
+kitchen-api = { editable_mode = "strict" }
+kitchen-admin-api = { editable_mode = "strict" }
+kitchen-worker = { editable_mode = "strict" }
+
+[tool.uv.workspace]
+members = ["apps/api", "apps/admin-api", "apps/worker", "packages/core", "packages/http"]
+
+[tool.uv.sources]
+kitchen-core = { workspace = true }
+kitchen-http = { workspace = true }
+kitchen-api = { workspace = true }
+kitchen-admin-api = { workspace = true }
+kitchen-worker = { workspace = true }
+
+[dependency-groups]
+dev = ["kitchen-api", "kitchen-admin-api", "kitchen-worker", "pytest>=8.3,<10", "ruff>=0.12,<1", "mypy>=1.15,<3", "httpx>=0.28,<1"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.mypy]
+python_version = "3.12"
+check_untyped_defs = true
+ignore_missing_imports = true

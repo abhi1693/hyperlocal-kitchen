@@ -1,0 +1,51 @@
+"""Platform-admin contracts without provider-owned identity mutation."""
+
+from datetime import datetime
+from uuid import UUID
+
+from kitchen_core.catalog_schemas import StrictRequest
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+
+class AdminUserOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    name: str | None
+    phone: str | None
+    is_active: bool
+    created_at: datetime
+
+
+class AdminUserUpdate(StrictRequest):
+    name: str | None = Field(default=None, min_length=1, max_length=120)
+
+    @model_validator(mode="after")
+    def provided_name(self):
+        if "name" not in self.model_fields_set:
+            raise ValueError("Provide the name to update.")
+        return self
+
+
+class TowerUpdate(StrictRequest):
+    name: str = Field(min_length=1, max_length=100)
+
+
+class MembershipCreate(StrictRequest):
+    user_id: UUID
+    society_id: UUID
+    tower_id: UUID
+    flat: str = Field(min_length=1, max_length=50)
+
+
+class MembershipUpdate(StrictRequest):
+    tower_id: UUID | None = None
+    flat: str | None = Field(default=None, min_length=1, max_length=50)
+
+    @model_validator(mode="after")
+    def provided_address(self):
+        if not self.model_fields_set:
+            raise ValueError("Provide a tower or flat to update.")
+        if any(getattr(self, field) is None for field in self.model_fields_set):
+            raise ValueError("Tower and flat cannot be empty.")
+        return self

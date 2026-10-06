@@ -1,0 +1,18 @@
+[project]
+name = "kitchen-admin-api"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = ["kitchen-core", "kitchen-http", "fastapi>=0.142.2,<1", "uvicorn[standard]>=0.34,<1"]
+
+[build-system]
+requires = ["setuptools>=80"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.package-dir]
+kitchen_admin_api = "src"
+
+[tool.setuptools.package-data]
+kitchen_admin_api = ["py.typed"]
+
+[tool.uv]
+cache-keys = [{ file = "pyproject.toml" }, { file = "src/**/*.py" }, { file = "src/py.typed" }]

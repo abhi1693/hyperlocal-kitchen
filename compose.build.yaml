@@ -1,0 +1,31 @@
+# Local-source builds and native watch, following DevFeed's rebuild workflow.
+x-backend-build: &backend-build
+  build:
+    context: .
+    dockerfile: Dockerfile
+
+x-backend-develop: &backend-develop
+  watch:
+    - {action: rebuild, path: ./packages/core}
+    - {action: rebuild, path: ./packages/http}
+    - {action: rebuild, path: ./apps/api}
+    - {action: rebuild, path: ./apps/admin-api}
+    - {action: rebuild, path: ./apps/worker}
+    - {action: rebuild, path: ./pyproject.toml}
+    - {action: rebuild, path: ./uv.lock}
+    - {action: rebuild, path: ./.python-version}
+    - {action: rebuild, path: ./Dockerfile}
+    - {action: rebuild, path: ./.dockerignore}
+
+services:
+  migrate:
+    <<: *backend-build
+  api:
+    <<: *backend-build
+    develop: *backend-develop
+  admin-api:
+    <<: *backend-build
+    develop: *backend-develop
+  worker:
+    <<: *backend-build
+    develop: *backend-develop
