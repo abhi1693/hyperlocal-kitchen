@@ -11,6 +11,8 @@ a separate API and Zitadel application. The admin web app and mobile UI come nex
   who can operate a kitchen.
 - Members select a community and optionally provide a home zone and address label.
   Joining activates membership immediately, with no invitation or membership approval.
+- One account can join multiple communities, such as home, office and other locations.
+  Each membership keeps its own zone, address and status.
 - Kitchen owners create reusable dishes and publish dated listings with price,
   portions, cutoff and pickup/delivery windows. Future listings supply the weekly
   menu; cooking again reuses the same dish.
@@ -307,6 +309,20 @@ orders by service window and agreed destination, with separate order and portion
 counts and linked order IDs. Pending, completed, rejected, cancelled and expired
 orders are excluded. Each customer's payment and order lifecycle remain separate.
 Dates use India time; destinations with different historical snapshots stay distinct.
+
+## Multiple communities per account
+
+A user can belong to one or more communities at the same time, for example a
+residential community at home, a corporate campus at work, and another community.
+There is one membership per user/community pair, with independent optional zone,
+address label and status. Joining another community does not replace an existing
+membership or move its saved address.
+
+`GET /api/v1/me/communities` returns the account's memberships. Clients use the
+selected community for menu discovery and fulfillment choices. Checkout derives
+the community from the chosen kitchen and uses that community's membership for
+a saved delivery address; it does not use a home address from another community.
+Suspending membership in one community does not suspend the others.
 
 ## Client onboarding
 

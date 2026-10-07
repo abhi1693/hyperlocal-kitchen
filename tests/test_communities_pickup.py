@@ -551,3 +551,47 @@ def test_automatic_selection_skips_inactive_zone_and_keeps_unzoned_points_eligib
     assert placed.status_code == 201, placed.text
     assert placed.json()["pickup_point_id"] == eligible_id
     assert placed.json()["fulfillment_snapshot"]["zone_name"] is None
+
+
+def test_user_can_join_home_and_office_with_independent_addresses_and_access(
+    admin_client, client, market
+):
+    home_id = str(market["community"].id)
+    office_id = str(market["other"].id)
+    assert (
+        admin_client.patch(
+            f"/api/v1/communities/{office_id}", json={"type": "corporate_campus"}
+        ).status_code
+        == 200
+    )
+    as_user(client, market["customer"])
+    office = client.post(
+        f"/api/v1/communities/{office_id}/join",
+        json={
+            "zone_id": str(market["other_zone"].id),
+            "address_label": "Office reception",
+        },
+    )
+    assert office.status_code == 201, office.text
+    memberships = {m["community_id"]: m for m in client.get("/api/v1/me/communities").json()}
+    assert set(memberships) == {home_id, office_id}
+    assert memberships[home_id]["address_label"] == "B-1001"
+    assert memberships[office_id]["address_label"] == "Office reception"
+    assert memberships[home_id]["zone_id"] == str(market["zone"].id)
+    assert memberships[office_id]["zone_id"] == str(market["other_zone"].id)
+    assert (
+        client.patch(
+            f"/api/v1/me/memberships/{office.json()['id']}", json={"address_label": "Office lobby"}
+        ).status_code
+        == 200
+    )
+    memberships = {m["community_id"]: m for m in client.get("/api/v1/me/communities").json()}
+    assert memberships[home_id]["address_label"] == "B-1001"
+    assert memberships[office_id]["address_label"] == "Office lobby"
+    assert client.get(f"/api/v1/communities/{home_id}/menu").status_code == 200
+    assert client.get(f"/api/v1/communities/{office_id}/menu").status_code == 200
+    assert (
+        admin_client.post(f"/api/v1/memberships/{office.json()['id']}/suspend").status_code == 200
+    )
+    assert client.get(f"/api/v1/communities/{office_id}/menu").status_code == 403
+    assert client.get(f"/api/v1/communities/{home_id}/menu").status_code == 200
