@@ -6,20 +6,21 @@ from kitchen_core import catalog
 from kitchen_core.admin_people_schemas import (
     AdminUserOut,
     AdminUserUpdate,
+    CommunityZoneUpdate,
     MembershipCreate,
     MembershipUpdate,
-    TowerUpdate,
 )
-from kitchen_core.catalog_schemas import MembershipAdminOut, TowerOut
+from kitchen_core.catalog_schemas import CommunityZoneOut, MembershipAdminOut
 from kitchen_core.errors import DomainError
 from kitchen_core.models import (
+    Community,
+    CommunityZone,
     Device,
     Kitchen,
     KitchenMember,
     Membership,
     Order,
-    Society,
-    Tower,
+    PickupPoint,
     User,
 )
 from sqlalchemy import delete, func, select, update
@@ -64,8 +65,8 @@ def set_user_active(session: Session, user_id: UUID, active: bool) -> AdminUserO
                 .with_for_update()
             )
         )
-        # Membership UUID order can visit societies differently for two users.
-        # Lock the full kitchen set once, in a shared order, before the per-society
+        # Membership UUID order can visit communities differently for two users.
+        # Lock the full kitchen set once, in a shared order, before the per-community
         # suspension loop can acquire any kitchen locks.
         list(
             session.scalars(
@@ -84,80 +85,102 @@ def set_user_active(session: Session, user_id: UUID, active: bool) -> AdminUserO
     return AdminUserOut.model_validate(user)
 
 
-def delete_society(session: Session, society_id: UUID) -> None:
-    locked(session, Society, society_id)
+def delete_community(session: Session, community_id: UUID) -> None:
+    locked(session, Community, community_id)
     _prohibit_references(
         session,
         [
-            ("residents", select(Membership.id).where(Membership.society_id == society_id)),
-            ("kitchens", select(Kitchen.id).where(Kitchen.society_id == society_id)),
-            ("orders", select(Order.id).where(Order.society_id == society_id)),
+            ("residents", select(Membership.id).where(Membership.community_id == community_id)),
+            ("kitchens", select(Kitchen.id).where(Kitchen.community_id == community_id)),
+            ("orders", select(Order.id).where(Order.community_id == community_id)),
+            (
+                "pickup points",
+                select(PickupPoint.id).where(PickupPoint.community_id == community_id),
+            ),
         ],
     )
-    # Towers are structural children; an otherwise unused society can remove them.
-    session.execute(delete(Tower).where(Tower.society_id == society_id))
-    session.execute(delete(Society).where(Society.id == society_id))
+    # CommunityZones are structural children; an otherwise unused community can remove them.
+    # Self-referencing zones must be detached before removing the unused hierarchy.
+    session.execute(
+        update(CommunityZone)
+        .where(CommunityZone.community_id == community_id)
+        .values(parent_zone_id=None)
+    )
+    session.execute(delete(CommunityZone).where(CommunityZone.community_id == community_id))
+    session.execute(delete(Community).where(Community.id == community_id))
     session.flush()
 
 
-def tower_view(tower: Tower) -> TowerOut:
-    return TowerOut(id=tower.id, society_id=tower.society_id, name=tower.name)
+def zone_view(zone: CommunityZone) -> CommunityZoneOut:
+    return catalog.zone_view(zone)
 
 
-def update_tower(session: Session, tower_id: UUID, data: TowerUpdate) -> TowerOut:
-    tower = catalog._get(session, Tower, tower_id)
-    locked(session, Society, tower.society_id)
-    tower = locked(session, Tower, tower_id)
-    duplicate = session.scalar(
-        select(Tower.id).where(
-            Tower.society_id == tower.society_id,
-            Tower.id != tower_id,
-            func.lower(Tower.name) == data.name.lower(),
+def update_zone(session: Session, zone_id: UUID, data: CommunityZoneUpdate) -> CommunityZoneOut:
+    zone = catalog._get(session, CommunityZone, zone_id)
+    locked(session, Community, zone.community_id)
+    zone = locked(session, CommunityZone, zone_id)
+    values = data.model_dump(exclude_unset=True)
+    if any(
+        values.get(field) is None for field in ("name", "zone_type", "active") if field in values
+    ):
+        raise DomainError(422, "required_field", "Name, type and active cannot be empty.")
+    if "name" in values and session.scalar(
+        select(CommunityZone.id).where(
+            CommunityZone.community_id == zone.community_id,
+            CommunityZone.id != zone_id,
+            func.lower(CommunityZone.name) == values["name"].lower(),
         )
-    )
-    if duplicate is not None:
-        raise DomainError(409, "duplicate_tower", "A tower with this name already exists.")
-    tower.name = data.name
+    ):
+        raise DomainError(409, "duplicate_zone", "A zone with this name already exists.")
+    if "parent_zone_id" in values:
+        catalog.validate_zone(session, zone.community_id, values["parent_zone_id"])
+        parent_id = values["parent_zone_id"]
+        visited = {zone_id}
+        while parent_id is not None:
+            if parent_id in visited:
+                raise DomainError(422, "zone_cycle", "Zones cannot form a cycle.")
+            visited.add(parent_id)
+            parent_id = catalog._get(session, CommunityZone, parent_id).parent_zone_id
+    for field, value in values.items():
+        setattr(zone, field, value)
     session.flush()
-    return tower_view(tower)
+    return zone_view(zone)
 
 
-def delete_tower(session: Session, tower_id: UUID) -> None:
-    tower = catalog._get(session, Tower, tower_id)
-    society = locked(session, Society, tower.society_id)
-    tower = locked(session, Tower, tower_id)
+def delete_zone(session: Session, zone_id: UUID) -> None:
+    zone = catalog._get(session, CommunityZone, zone_id)
+    locked(session, Community, zone.community_id)
+    zone = locked(session, CommunityZone, zone_id)
     _prohibit_references(
         session,
         [
-            ("residents", select(Membership.id).where(Membership.tower_id == tower_id)),
-            ("kitchens", select(Kitchen.id).where(Kitchen.tower_id == tower_id)),
+            ("members", select(Membership.id).where(Membership.zone_id == zone_id)),
+            ("kitchens", select(Kitchen.id).where(Kitchen.zone_id == zone_id)),
+            (
+                "child zones",
+                select(CommunityZone.id).where(CommunityZone.parent_zone_id == zone_id),
+            ),
+            ("pickup points", select(PickupPoint.id).where(PickupPoint.zone_id == zone_id)),
         ],
     )
-    another = session.scalar(
-        select(Tower.id).where(Tower.society_id == society.id, Tower.id != tower_id).limit(1)
-    )
-    if society.status == "active" and another is None:
-        raise DomainError(409, "towers_required", "An active society must retain a tower.")
-    session.delete(tower)
+    session.delete(zone)
     session.flush()
 
 
 def create_membership(session: Session, data: MembershipCreate) -> MembershipAdminOut:
     user = locked(session, User, data.user_id, key_share=True)
-    society = locked(session, Society, data.society_id)
+    community = locked(session, Community, data.community_id)
     if not user.is_active:
-        raise DomainError(409, "user_inactive", "An inactive account cannot join a society.")
-    catalog.require_active_society(session, society.id)
-    tower = catalog._get(session, Tower, data.tower_id)
-    if tower.society_id != society.id:
-        raise DomainError(422, "tower_society_mismatch", "Choose a tower in the selected society.")
+        raise DomainError(409, "user_inactive", "An inactive account cannot join a community.")
+    catalog.require_active_community(session, community.id)
+    catalog.validate_zone(session, community.id, data.zone_id)
     existing = session.scalar(
         select(Membership.id).where(
-            Membership.user_id == user.id, Membership.society_id == society.id
+            Membership.user_id == user.id, Membership.community_id == community.id
         )
     )
     if existing is not None:
-        raise DomainError(409, "membership_exists", "This resident already has a membership.")
+        raise DomainError(409, "membership_exists", "This member already has a membership.")
     membership = Membership(**data.model_dump(), status="active")
     session.add(membership)
     session.flush()
@@ -176,7 +199,7 @@ def _kitchen_memberships(membership: Membership):
         .join(Kitchen)
         .where(
             KitchenMember.user_id == membership.user_id,
-            Kitchen.society_id == membership.society_id,
+            Kitchen.community_id == membership.community_id,
         )
     )
 
@@ -185,20 +208,11 @@ def update_membership(
     session: Session, membership_id: UUID, data: MembershipUpdate
 ) -> MembershipAdminOut:
     membership = _locked_membership(session, membership_id)
-    tower_id = data.tower_id or membership.tower_id
-    flat = data.flat if data.flat is not None else membership.flat
-    tower = catalog._get(session, Tower, tower_id)
-    if tower.society_id != membership.society_id:
-        raise DomainError(422, "tower_society_mismatch", "Choose a tower in the selected society.")
-    changed = tower_id != membership.tower_id or flat != membership.flat
-    if changed and session.scalar(select(_kitchen_memberships(membership).exists())):
-        raise DomainError(
-            409,
-            "kitchen_address_in_use",
-            "Manage the resident's kitchen relationships before changing this address.",
-        )
-    membership.tower_id = tower_id
-    membership.flat = flat
+    values = data.model_dump(exclude_unset=True)
+    if "zone_id" in values:
+        catalog.validate_zone(session, membership.community_id, values["zone_id"])
+    for field, value in values.items():
+        setattr(membership, field, value)
     session.flush()
     return catalog.membership_view(session, membership, admin=True)
 
@@ -213,7 +227,7 @@ def delete_membership(session: Session, membership_id: UUID) -> None:
                 "orders",
                 select(Order.id).where(
                     Order.customer_id == membership.user_id,
-                    Order.society_id == membership.society_id,
+                    Order.community_id == membership.community_id,
                 ),
             ),
         ],

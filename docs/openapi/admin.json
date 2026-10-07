@@ -1477,13 +1477,13 @@
         }
       }
     },
-    "/api/v1/societies": {
+    "/api/v1/communities": {
       "get": {
         "tags": [
-          "admin-societies"
+          "admin-communities"
         ],
-        "summary": "List Societies",
-        "operationId": "admin_list_societies",
+        "summary": "List Communities",
+        "operationId": "admin_list_communities",
         "security": [
           {
             "APIKeyCookie": []
@@ -1571,7 +1571,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Page_SocietyOut_"
+                  "$ref": "#/components/schemas/Page_CommunityOut_"
                 }
               }
             }
@@ -1660,10 +1660,10 @@
       },
       "post": {
         "tags": [
-          "admin-societies"
+          "admin-communities"
         ],
-        "summary": "Create Society",
-        "operationId": "admin_create_society",
+        "summary": "Create Community",
+        "operationId": "admin_create_community",
         "security": [
           {
             "APIKeyCookie": []
@@ -1674,7 +1674,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SocietyCreate"
+                "$ref": "#/components/schemas/CommunityCreate"
               }
             }
           }
@@ -1685,7 +1685,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SocietyOut"
+                  "$ref": "#/components/schemas/CommunityOut"
                 }
               }
             }
@@ -1773,13 +1773,13 @@
         }
       }
     },
-    "/api/v1/societies/{society_id}": {
+    "/api/v1/communities/{community_id}": {
       "get": {
         "tags": [
-          "admin-societies"
+          "admin-communities"
         ],
-        "summary": "Get Society",
-        "operationId": "admin_get_society",
+        "summary": "Get Community",
+        "operationId": "admin_get_community",
         "security": [
           {
             "APIKeyCookie": []
@@ -1787,13 +1787,13 @@
         ],
         "parameters": [
           {
-            "name": "society_id",
+            "name": "community_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Society Id"
+              "title": "Community Id"
             }
           }
         ],
@@ -1803,7 +1803,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SocietyOut"
+                  "$ref": "#/components/schemas/CommunityOut"
                 }
               }
             }
@@ -1892,10 +1892,10 @@
       },
       "patch": {
         "tags": [
-          "admin-societies"
+          "admin-communities"
         ],
-        "summary": "Update Society",
-        "operationId": "admin_update_society",
+        "summary": "Update Community",
+        "operationId": "admin_update_community",
         "security": [
           {
             "APIKeyCookie": []
@@ -1903,13 +1903,13 @@
         ],
         "parameters": [
           {
-            "name": "society_id",
+            "name": "community_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Society Id"
+              "title": "Community Id"
             }
           }
         ],
@@ -1918,7 +1918,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SocietyUpdate"
+                "$ref": "#/components/schemas/CommunityUpdate"
               }
             }
           }
@@ -1929,7 +1929,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SocietyOut"
+                  "$ref": "#/components/schemas/CommunityOut"
                 }
               }
             }
@@ -2018,10 +2018,10 @@
       },
       "delete": {
         "tags": [
-          "admin-societies"
+          "admin-communities"
         ],
-        "summary": "Delete Society",
-        "operationId": "admin_delete_society",
+        "summary": "Delete Community",
+        "operationId": "admin_delete_community",
         "security": [
           {
             "APIKeyCookie": []
@@ -2029,13 +2029,13 @@
         ],
         "parameters": [
           {
-            "name": "society_id",
+            "name": "community_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Society Id"
+              "title": "Community Id"
             }
           }
         ],
@@ -2126,13 +2126,13 @@
         }
       }
     },
-    "/api/v1/societies/{society_id}/activate": {
+    "/api/v1/communities/{community_id}/activate": {
       "post": {
         "tags": [
-          "admin-societies"
+          "admin-communities"
         ],
-        "summary": "Activate Society",
-        "operationId": "admin_activate_society",
+        "summary": "Activate Community",
+        "operationId": "admin_activate_community",
         "security": [
           {
             "APIKeyCookie": []
@@ -2140,13 +2140,13 @@
         ],
         "parameters": [
           {
-            "name": "society_id",
+            "name": "community_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Society Id"
+              "title": "Community Id"
             }
           }
         ],
@@ -2156,7 +2156,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SocietyOut"
+                  "$ref": "#/components/schemas/CommunityOut"
                 }
               }
             }
@@ -2244,13 +2244,13 @@
         }
       }
     },
-    "/api/v1/societies/{society_id}/pause": {
+    "/api/v1/communities/{community_id}/pause": {
       "post": {
         "tags": [
-          "admin-societies"
+          "admin-communities"
         ],
-        "summary": "Pause Society",
-        "operationId": "admin_pause_society",
+        "summary": "Pause Community",
+        "operationId": "admin_pause_community",
         "security": [
           {
             "APIKeyCookie": []
@@ -2258,13 +2258,13 @@
         ],
         "parameters": [
           {
-            "name": "society_id",
+            "name": "community_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Society Id"
+              "title": "Community Id"
             }
           }
         ],
@@ -2274,7 +2274,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SocietyOut"
+                  "$ref": "#/components/schemas/CommunityOut"
                 }
               }
             }
@@ -2362,13 +2362,13 @@
         }
       }
     },
-    "/api/v1/societies/{society_id}/towers": {
+    "/api/v1/communities/{community_id}/zones": {
       "get": {
         "tags": [
-          "admin-societies"
+          "admin-communities"
         ],
-        "summary": "List Society Towers",
-        "operationId": "admin_list_society_towers",
+        "summary": "List Community Zones",
+        "operationId": "admin_list_community_zones",
         "security": [
           {
             "APIKeyCookie": []
@@ -2376,13 +2376,13 @@
         ],
         "parameters": [
           {
-            "name": "society_id",
+            "name": "community_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Society Id"
+              "title": "Community Id"
             }
           },
           {
@@ -2445,7 +2445,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Page_TowerOut_"
+                  "$ref": "#/components/schemas/Page_CommunityZoneOut_"
                 }
               }
             }
@@ -2534,10 +2534,10 @@
       },
       "post": {
         "tags": [
-          "admin-societies"
+          "admin-communities"
         ],
-        "summary": "Create Tower",
-        "operationId": "admin_create_tower",
+        "summary": "Create Zone",
+        "operationId": "admin_create_zone",
         "security": [
           {
             "APIKeyCookie": []
@@ -2545,13 +2545,13 @@
         ],
         "parameters": [
           {
-            "name": "society_id",
+            "name": "community_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Society Id"
+              "title": "Community Id"
             }
           }
         ],
@@ -2560,7 +2560,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/TowerCreate"
+                "$ref": "#/components/schemas/CommunityZoneCreate"
               }
             }
           }
@@ -2571,7 +2571,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TowerOut"
+                  "$ref": "#/components/schemas/CommunityZoneOut"
                 }
               }
             }
@@ -2659,13 +2659,13 @@
         }
       }
     },
-    "/api/v1/towers": {
+    "/api/v1/zones": {
       "get": {
         "tags": [
-          "admin-towers"
+          "admin-zones"
         ],
-        "summary": "List Towers",
-        "operationId": "admin_list_towers",
+        "summary": "List Zones",
+        "operationId": "admin_list_zones",
         "security": [
           {
             "APIKeyCookie": []
@@ -2673,7 +2673,7 @@
         ],
         "parameters": [
           {
-            "name": "society_id",
+            "name": "community_id",
             "in": "query",
             "required": false,
             "schema": {
@@ -2686,7 +2686,7 @@
                   "type": "null"
                 }
               ],
-              "title": "Society Id"
+              "title": "Community Id"
             }
           },
           {
@@ -2749,7 +2749,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Page_TowerOut_"
+                  "$ref": "#/components/schemas/Page_CommunityZoneOut_"
                 }
               }
             }
@@ -2837,13 +2837,13 @@
         }
       }
     },
-    "/api/v1/towers/{tower_id}": {
+    "/api/v1/zones/{zone_id}": {
       "get": {
         "tags": [
-          "admin-towers"
+          "admin-zones"
         ],
-        "summary": "Get Tower",
-        "operationId": "admin_get_tower",
+        "summary": "Get Zone",
+        "operationId": "admin_get_zone",
         "security": [
           {
             "APIKeyCookie": []
@@ -2851,13 +2851,13 @@
         ],
         "parameters": [
           {
-            "name": "tower_id",
+            "name": "zone_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Tower Id"
+              "title": "Zone Id"
             }
           }
         ],
@@ -2867,7 +2867,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TowerOut"
+                  "$ref": "#/components/schemas/CommunityZoneOut"
                 }
               }
             }
@@ -2956,10 +2956,10 @@
       },
       "patch": {
         "tags": [
-          "admin-towers"
+          "admin-zones"
         ],
-        "summary": "Update Tower",
-        "operationId": "admin_update_tower",
+        "summary": "Update Zone",
+        "operationId": "admin_update_zone",
         "security": [
           {
             "APIKeyCookie": []
@@ -2967,13 +2967,13 @@
         ],
         "parameters": [
           {
-            "name": "tower_id",
+            "name": "zone_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Tower Id"
+              "title": "Zone Id"
             }
           }
         ],
@@ -2982,7 +2982,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/TowerUpdate"
+                "$ref": "#/components/schemas/CommunityZoneUpdate"
               }
             }
           }
@@ -2993,7 +2993,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TowerOut"
+                  "$ref": "#/components/schemas/CommunityZoneOut"
                 }
               }
             }
@@ -3082,10 +3082,10 @@
       },
       "delete": {
         "tags": [
-          "admin-towers"
+          "admin-zones"
         ],
-        "summary": "Delete Tower",
-        "operationId": "admin_delete_tower",
+        "summary": "Delete Zone",
+        "operationId": "admin_delete_zone",
         "security": [
           {
             "APIKeyCookie": []
@@ -3093,13 +3093,13 @@
         ],
         "parameters": [
           {
-            "name": "tower_id",
+            "name": "zone_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Tower Id"
+              "title": "Zone Id"
             }
           }
         ],
@@ -3204,7 +3204,7 @@
         ],
         "parameters": [
           {
-            "name": "society_id",
+            "name": "community_id",
             "in": "query",
             "required": false,
             "schema": {
@@ -3217,7 +3217,7 @@
                   "type": "null"
                 }
               ],
-              "title": "Society Id"
+              "title": "Community Id"
             }
           },
           {
@@ -4108,6 +4108,373 @@
         }
       }
     },
+    "/api/v1/communities/{community_id}/pickup-points": {
+      "get": {
+        "summary": "Community Pickup Points",
+        "operationId": "community_pickup_points_api_v1_communities__community_id__pickup_points_get",
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "community_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Community Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PickupPointOut"
+                  },
+                  "title": "Response Community Pickup Points Api V1 Communities  Community Id  Pickup Points Get"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create Pickup Point",
+        "operationId": "create_pickup_point_api_v1_communities__community_id__pickup_points_post",
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "community_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Community Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PickupPointCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PickupPointOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/pickup-points/{point_id}": {
+      "patch": {
+        "summary": "Edit Pickup Point",
+        "operationId": "edit_pickup_point_api_v1_pickup_points__point_id__patch",
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "point_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Point Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PickupPointUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PickupPointOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
     "/api/v1/kitchens": {
       "get": {
         "tags": [
@@ -4122,7 +4489,7 @@
         ],
         "parameters": [
           {
-            "name": "society_id",
+            "name": "community_id",
             "in": "query",
             "required": false,
             "schema": {
@@ -4135,7 +4502,7 @@
                   "type": "null"
                 }
               ],
-              "title": "Society Id"
+              "title": "Community Id"
             }
           },
           {
@@ -5605,7 +5972,7 @@
             }
           },
           {
-            "name": "society_id",
+            "name": "community_id",
             "in": "query",
             "required": false,
             "schema": {
@@ -5618,7 +5985,7 @@
                   "type": "null"
                 }
               ],
-              "title": "Society Id"
+              "title": "Community Id"
             }
           },
           {
@@ -6714,7 +7081,7 @@
             }
           },
           {
-            "name": "society_id",
+            "name": "community_id",
             "in": "query",
             "required": false,
             "schema": {
@@ -6727,7 +7094,7 @@
                   "type": "null"
                 }
               ],
-              "title": "Society Id"
+              "title": "Community Id"
             }
           },
           {
@@ -7853,7 +8220,7 @@
             }
           },
           {
-            "name": "society_id",
+            "name": "community_id",
             "in": "query",
             "required": false,
             "schema": {
@@ -7866,7 +8233,7 @@
                   "type": "null"
                 }
               ],
-              "title": "Society Id"
+              "title": "Community Id"
             }
           },
           {
@@ -9262,18 +9629,162 @@
           }
         }
       }
+    },
+    "/api/v1/kitchens/{kitchen_id}/fulfillment-groups": {
+      "get": {
+        "tags": [
+          "admin-orders"
+        ],
+        "summary": "Kitchen Fulfillment Groups",
+        "operationId": "admin_kitchen_fulfillment_groups",
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "kitchen_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Kitchen Id"
+            }
+          },
+          {
+            "name": "service_date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "Service Date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FulfillmentGroup"
+                  },
+                  "title": "Response Admin Kitchen Fulfillment Groups"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
       "AddressSnapshot": {
         "properties": {
-          "society_name": {
+          "version": {
+            "type": "integer",
+            "title": "Version",
+            "default": 2
+          },
+          "community_name": {
             "type": "string",
-            "title": "Society Name"
+            "title": "Community Name"
           },
           "address": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Address"
           },
           "city": {
@@ -9281,26 +9792,65 @@
             "title": "City"
           },
           "postal_code": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Postal Code"
           },
-          "tower_name": {
-            "type": "string",
-            "title": "Tower Name"
+          "zone_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Name"
           },
-          "flat": {
-            "type": "string",
-            "title": "Flat"
+          "address_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address Label"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "instructions": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instructions"
           }
         },
         "type": "object",
         "required": [
-          "society_name",
-          "address",
-          "city",
-          "postal_code",
-          "tower_name",
-          "flat"
+          "community_name",
+          "city"
         ],
         "title": "AddressSnapshot"
       },
@@ -9352,10 +9902,35 @@
       },
       "AdminKitchenCreate": {
         "properties": {
-          "society_id": {
+          "zone_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Id"
+          },
+          "address_label": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 250,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address Label"
+          },
+          "community_id": {
             "type": "string",
             "format": "uuid",
-            "title": "Society Id"
+            "title": "Community Id"
           },
           "name": {
             "type": "string",
@@ -9426,7 +10001,7 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "society_id",
+          "community_id",
           "name",
           "owner_user_id"
         ],
@@ -9434,6 +10009,31 @@
       },
       "AdminKitchenUpdate": {
         "properties": {
+          "zone_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Id"
+          },
+          "address_label": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 250,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address Label"
+          },
           "name": {
             "anyOf": [
               {
@@ -9518,31 +10118,6 @@
               }
             ],
             "title": "Fssai Number"
-          },
-          "tower_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Tower Id"
-          },
-          "flat": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 50,
-                "minLength": 1
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Flat"
           }
         },
         "additionalProperties": false,
@@ -9551,6 +10126,15 @@
       },
       "AdminListingCreate": {
         "properties": {
+          "pickup_point_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "maxItems": 30,
+            "title": "Pickup Point Ids"
+          },
           "dish_id": {
             "type": "string",
             "format": "uuid",
@@ -9629,6 +10213,28 @@
       },
       "AdminOrderCreate": {
         "properties": {
+          "pickup_point_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pickup Point Id"
+          },
+          "delivery_address": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeliveryAddress"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "items": {
             "items": {
               "$ref": "#/components/schemas/OrderItemCreate"
@@ -9829,6 +10435,419 @@
           "enabled"
         ],
         "title": "AuthConfig"
+      },
+      "CommunityCreate": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "residential_society",
+              "cantonment",
+              "housing_colony",
+              "university",
+              "corporate_campus",
+              "gated_community",
+              "other"
+            ],
+            "title": "Type",
+            "default": "residential_society"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "address": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "city": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "City"
+          },
+          "postal_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Postal Code"
+          },
+          "zones": {
+            "items": {
+              "$ref": "#/components/schemas/CommunityZoneCreate"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "title": "Zones"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "city"
+        ],
+        "title": "CommunityCreate"
+      },
+      "CommunityOut": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "residential_society",
+              "cantonment",
+              "housing_colony",
+              "university",
+              "corporate_campus",
+              "gated_community",
+              "other"
+            ],
+            "title": "Type"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "city": {
+            "type": "string",
+            "title": "City"
+          },
+          "postal_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Postal Code"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "zones": {
+            "items": {
+              "$ref": "#/components/schemas/CommunityZoneOut"
+            },
+            "type": "array",
+            "title": "Zones"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "id",
+          "name",
+          "address",
+          "city",
+          "postal_code",
+          "status",
+          "zones"
+        ],
+        "title": "CommunityOut"
+      },
+      "CommunityUpdate": {
+        "properties": {
+          "type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "residential_society",
+                  "cantonment",
+                  "housing_colony",
+                  "university",
+                  "corporate_campus",
+                  "gated_community",
+                  "other"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Type"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "address": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "postal_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Postal Code"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "CommunityUpdate"
+      },
+      "CommunityZoneCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "parent_zone_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Zone Id"
+          },
+          "zone_type": {
+            "type": "string",
+            "enum": [
+              "tower",
+              "area",
+              "hostel",
+              "block",
+              "other"
+            ],
+            "title": "Zone Type",
+            "default": "other"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "CommunityZoneCreate"
+      },
+      "CommunityZoneOut": {
+        "properties": {
+          "parent_zone_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Zone Id"
+          },
+          "zone_type": {
+            "type": "string",
+            "enum": [
+              "tower",
+              "area",
+              "hostel",
+              "block",
+              "other"
+            ],
+            "title": "Zone Type",
+            "default": "other"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active",
+            "default": true
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "community_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Community Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "community_id",
+          "name"
+        ],
+        "title": "CommunityZoneOut"
+      },
+      "CommunityZoneUpdate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "parent_zone_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Zone Id"
+          },
+          "zone_type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "tower",
+                  "area",
+                  "hostel",
+                  "block",
+                  "other"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Type"
+          },
+          "active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "CommunityZoneUpdate"
+      },
+      "DeliveryAddress": {
+        "properties": {
+          "zone_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Id"
+          },
+          "address_label": {
+            "type": "string",
+            "maxLength": 250,
+            "minLength": 1,
+            "title": "Address Label"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "address_label"
+        ],
+        "title": "DeliveryAddress"
       },
       "DishCreate": {
         "properties": {
@@ -10045,6 +11064,71 @@
         ],
         "title": "FieldIssue"
       },
+      "FulfillmentGroup": {
+        "properties": {
+          "fulfillment_type": {
+            "type": "string",
+            "enum": [
+              "pickup",
+              "delivery"
+            ],
+            "title": "Fulfillment Type"
+          },
+          "pickup_point_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pickup Point Id"
+          },
+          "fulfillment_snapshot": {
+            "$ref": "#/components/schemas/AddressSnapshot"
+          },
+          "available_from": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Available From"
+          },
+          "available_until": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Available Until"
+          },
+          "order_count": {
+            "type": "integer",
+            "title": "Order Count"
+          },
+          "portion_count": {
+            "type": "integer",
+            "title": "Portion Count"
+          },
+          "order_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Order Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "fulfillment_type",
+          "pickup_point_id",
+          "fulfillment_snapshot",
+          "available_from",
+          "available_until",
+          "order_count",
+          "portion_count",
+          "order_ids"
+        ],
+        "title": "FulfillmentGroup"
+      },
       "HealthResponse": {
         "properties": {
           "status": {
@@ -10169,10 +11253,10 @@
             "format": "uuid",
             "title": "Id"
           },
-          "society_id": {
+          "community_id": {
             "type": "string",
             "format": "uuid",
-            "title": "Society Id"
+            "title": "Community Id"
           },
           "name": {
             "type": "string",
@@ -10189,9 +11273,16 @@
             ],
             "title": "Description"
           },
-          "tower_name": {
-            "type": "string",
-            "title": "Tower Name"
+          "zone_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Name"
           },
           "pickup_enabled": {
             "type": "boolean",
@@ -10224,10 +11315,9 @@
         "type": "object",
         "required": [
           "id",
-          "society_id",
+          "community_id",
           "name",
           "description",
-          "tower_name",
           "pickup_enabled",
           "delivery_enabled",
           "delivery_fee_paise",
@@ -10243,10 +11333,10 @@
             "format": "uuid",
             "title": "Id"
           },
-          "society_id": {
+          "community_id": {
             "type": "string",
             "format": "uuid",
-            "title": "Society Id"
+            "title": "Community Id"
           },
           "name": {
             "type": "string",
@@ -10263,9 +11353,16 @@
             ],
             "title": "Description"
           },
-          "tower_name": {
-            "type": "string",
-            "title": "Tower Name"
+          "zone_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Name"
           },
           "pickup_enabled": {
             "type": "boolean",
@@ -10294,14 +11391,28 @@
             ],
             "title": "Fssai Number"
           },
-          "tower_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Tower Id"
+          "zone_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Id"
           },
-          "flat": {
-            "type": "string",
-            "title": "Flat"
+          "address_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address Label"
           },
           "upi_id": {
             "anyOf": [
@@ -10318,23 +11429,29 @@
         "type": "object",
         "required": [
           "id",
-          "society_id",
+          "community_id",
           "name",
           "description",
-          "tower_name",
           "pickup_enabled",
           "delivery_enabled",
           "delivery_fee_paise",
           "status",
           "fssai_number",
-          "tower_id",
-          "flat",
           "upi_id"
         ],
         "title": "KitchenOwnOut"
       },
       "ListingCreate": {
         "properties": {
+          "pickup_point_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "maxItems": 30,
+            "title": "Pickup Point Ids"
+          },
           "dish_id": {
             "type": "string",
             "format": "uuid",
@@ -10407,6 +11524,13 @@
       },
       "ListingOut": {
         "properties": {
+          "pickup_points": {
+            "items": {
+              "$ref": "#/components/schemas/PickupPointOut"
+            },
+            "type": "array",
+            "title": "Pickup Points"
+          },
           "id": {
             "type": "string",
             "format": "uuid",
@@ -10473,6 +11597,7 @@
         },
         "type": "object",
         "required": [
+          "pickup_points",
           "id",
           "kitchen",
           "dish",
@@ -10493,6 +11618,22 @@
       },
       "ListingUpdate": {
         "properties": {
+          "pickup_point_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "type": "array",
+                "maxItems": 30
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pickup Point Ids"
+          },
           "service_date": {
             "anyOf": [
               {
@@ -10617,32 +11758,53 @@
             "format": "uuid",
             "title": "Id"
           },
-          "society_id": {
+          "community_id": {
             "type": "string",
             "format": "uuid",
-            "title": "Society Id"
+            "title": "Community Id"
           },
           "user_id": {
             "type": "string",
             "format": "uuid",
             "title": "User Id"
           },
-          "society_name": {
+          "community_name": {
             "type": "string",
-            "title": "Society Name"
+            "title": "Community Name"
           },
-          "tower_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Tower Id"
+          "zone_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Id"
           },
-          "tower_name": {
-            "type": "string",
-            "title": "Tower Name"
+          "zone_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Name"
           },
-          "flat": {
-            "type": "string",
-            "title": "Flat"
+          "address_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address Label"
           },
           "status": {
             "type": "string",
@@ -10674,12 +11836,9 @@
         "type": "object",
         "required": [
           "id",
-          "society_id",
+          "community_id",
           "user_id",
-          "society_name",
-          "tower_id",
-          "tower_name",
-          "flat",
+          "community_name",
           "status",
           "user_name",
           "phone"
@@ -10693,36 +11852,12 @@
             "format": "uuid",
             "title": "User Id"
           },
-          "society_id": {
+          "community_id": {
             "type": "string",
             "format": "uuid",
-            "title": "Society Id"
+            "title": "Community Id"
           },
-          "tower_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Tower Id"
-          },
-          "flat": {
-            "type": "string",
-            "maxLength": 50,
-            "minLength": 1,
-            "title": "Flat"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "user_id",
-          "society_id",
-          "tower_id",
-          "flat"
-        ],
-        "title": "MembershipCreate"
-      },
-      "MembershipUpdate": {
-        "properties": {
-          "tower_id": {
+          "zone_id": {
             "anyOf": [
               {
                 "type": "string",
@@ -10732,20 +11867,56 @@
                 "type": "null"
               }
             ],
-            "title": "Tower Id"
+            "title": "Zone Id"
           },
-          "flat": {
+          "address_label": {
             "anyOf": [
               {
                 "type": "string",
-                "maxLength": 50,
+                "maxLength": 250,
                 "minLength": 1
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Flat"
+            "title": "Address Label"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "user_id",
+          "community_id"
+        ],
+        "title": "MembershipCreate"
+      },
+      "MembershipUpdate": {
+        "properties": {
+          "zone_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Id"
+          },
+          "address_label": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 250,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address Label"
           }
         },
         "additionalProperties": false,
@@ -10850,10 +12021,10 @@
             "type": "integer",
             "title": "Order Number"
           },
-          "society_id": {
+          "community_id": {
             "type": "string",
             "format": "uuid",
-            "title": "Society Id"
+            "title": "Community Id"
           },
           "kitchen_id": {
             "type": "string",
@@ -10961,11 +12132,40 @@
             "format": "date-time",
             "title": "Available Until"
           },
-          "pickup_address": {
+          "pickup_point_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pickup Point Id"
+          },
+          "fulfillment_snapshot": {
             "$ref": "#/components/schemas/AddressSnapshot"
           },
+          "pickup_address": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AddressSnapshot"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "delivery_address": {
-            "$ref": "#/components/schemas/AddressSnapshot"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AddressSnapshot"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "expires_at": {
             "type": "string",
@@ -10994,7 +12194,7 @@
         "required": [
           "id",
           "order_number",
-          "society_id",
+          "community_id",
           "kitchen_id",
           "customer_id",
           "kitchen_name",
@@ -11011,6 +12211,8 @@
           "total_paise",
           "available_from",
           "available_until",
+          "pickup_point_id",
+          "fulfillment_snapshot",
           "pickup_address",
           "delivery_address",
           "expires_at",
@@ -11066,6 +12268,68 @@
           "offset"
         ],
         "title": "Page[AdminUserOut]"
+      },
+      "Page_CommunityOut_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CommunityOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "Page[CommunityOut]"
+      },
+      "Page_CommunityZoneOut_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CommunityZoneOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "Page[CommunityZoneOut]"
       },
       "Page_DishOut_": {
         "properties": {
@@ -11253,167 +12517,138 @@
         ],
         "title": "Page[OrderOut]"
       },
-      "Page_SocietyOut_": {
-        "properties": {
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/SocietyOut"
-            },
-            "type": "array",
-            "title": "Items"
-          },
-          "total": {
-            "type": "integer",
-            "title": "Total"
-          },
-          "limit": {
-            "type": "integer",
-            "title": "Limit"
-          },
-          "offset": {
-            "type": "integer",
-            "title": "Offset"
-          }
-        },
-        "type": "object",
-        "required": [
-          "items",
-          "total",
-          "limit",
-          "offset"
-        ],
-        "title": "Page[SocietyOut]"
-      },
-      "Page_TowerOut_": {
-        "properties": {
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/TowerOut"
-            },
-            "type": "array",
-            "title": "Items"
-          },
-          "total": {
-            "type": "integer",
-            "title": "Total"
-          },
-          "limit": {
-            "type": "integer",
-            "title": "Limit"
-          },
-          "offset": {
-            "type": "integer",
-            "title": "Offset"
-          }
-        },
-        "type": "object",
-        "required": [
-          "items",
-          "total",
-          "limit",
-          "offset"
-        ],
-        "title": "Page[TowerOut]"
-      },
-      "SocietyCreate": {
+      "PickupPointCreate": {
         "properties": {
           "name": {
             "type": "string",
-            "maxLength": 200,
+            "maxLength": 150,
             "minLength": 1,
             "title": "Name"
           },
-          "address": {
-            "type": "string",
-            "maxLength": 500,
-            "minLength": 1,
-            "title": "Address"
+          "zone_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Id"
           },
-          "city": {
+          "address_label": {
             "type": "string",
-            "maxLength": 100,
+            "maxLength": 250,
             "minLength": 1,
-            "title": "City"
+            "title": "Address Label"
           },
-          "postal_code": {
-            "type": "string",
-            "maxLength": 20,
-            "minLength": 1,
-            "title": "Postal Code"
+          "instructions": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instructions"
           },
-          "towers": {
-            "items": {
-              "$ref": "#/components/schemas/TowerCreate"
-            },
-            "type": "array",
-            "maxItems": 100,
-            "title": "Towers"
+          "active": {
+            "type": "boolean",
+            "title": "Active",
+            "default": true
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
           "name",
-          "address",
-          "city",
-          "postal_code"
+          "address_label"
         ],
-        "title": "SocietyCreate"
+        "title": "PickupPointCreate"
       },
-      "SocietyOut": {
+      "PickupPointOut": {
         "properties": {
           "id": {
             "type": "string",
             "format": "uuid",
             "title": "Id"
           },
+          "community_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Community Id"
+          },
+          "kitchen_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kitchen Id"
+          },
+          "zone_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Id"
+          },
           "name": {
             "type": "string",
             "title": "Name"
           },
-          "address": {
+          "address_label": {
             "type": "string",
-            "title": "Address"
+            "title": "Address Label"
           },
-          "city": {
-            "type": "string",
-            "title": "City"
+          "instructions": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instructions"
           },
-          "postal_code": {
-            "type": "string",
-            "title": "Postal Code"
-          },
-          "status": {
-            "type": "string",
-            "title": "Status"
-          },
-          "towers": {
-            "items": {
-              "$ref": "#/components/schemas/TowerOut"
-            },
-            "type": "array",
-            "title": "Towers"
+          "active": {
+            "type": "boolean",
+            "title": "Active"
           }
         },
         "type": "object",
         "required": [
           "id",
+          "community_id",
+          "kitchen_id",
+          "zone_id",
           "name",
-          "address",
-          "city",
-          "postal_code",
-          "status",
-          "towers"
+          "address_label",
+          "instructions",
+          "active"
         ],
-        "title": "SocietyOut"
+        "title": "PickupPointOut"
       },
-      "SocietyUpdate": {
+      "PickupPointUpdate": {
         "properties": {
           "name": {
             "anyOf": [
               {
                 "type": "string",
-                "maxLength": 200,
+                "maxLength": 150,
                 "minLength": 1
               },
               {
@@ -11422,106 +12657,58 @@
             ],
             "title": "Name"
           },
-          "address": {
+          "zone_id": {
             "anyOf": [
               {
                 "type": "string",
-                "maxLength": 500,
-                "minLength": 1
+                "format": "uuid"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Address"
+            "title": "Zone Id"
           },
-          "city": {
+          "address_label": {
             "anyOf": [
               {
                 "type": "string",
-                "maxLength": 100,
+                "maxLength": 250,
                 "minLength": 1
               },
               {
                 "type": "null"
               }
             ],
-            "title": "City"
+            "title": "Address Label"
           },
-          "postal_code": {
+          "instructions": {
             "anyOf": [
               {
                 "type": "string",
-                "maxLength": 20,
-                "minLength": 1
+                "maxLength": 1000
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Postal Code"
+            "title": "Instructions"
+          },
+          "active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active"
           }
         },
         "additionalProperties": false,
         "type": "object",
-        "title": "SocietyUpdate"
-      },
-      "TowerCreate": {
-        "properties": {
-          "name": {
-            "type": "string",
-            "maxLength": 100,
-            "minLength": 1,
-            "title": "Name"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "name"
-        ],
-        "title": "TowerCreate"
-      },
-      "TowerOut": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Id"
-          },
-          "society_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Society Id"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "society_id",
-          "name"
-        ],
-        "title": "TowerOut"
-      },
-      "TowerUpdate": {
-        "properties": {
-          "name": {
-            "type": "string",
-            "maxLength": 100,
-            "minLength": 1,
-            "title": "Name"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "name"
-        ],
-        "title": "TowerUpdate"
+        "title": "PickupPointUpdate"
       }
     },
     "securitySchemes": {

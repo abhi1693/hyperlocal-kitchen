@@ -1,10 +1,18 @@
-"""Society-scoped catalog operations shared by the resident and admin APIs."""
+"""Community-scoped catalog operations shared by the resident and admin APIs."""
 
 from datetime import UTC, date, timedelta
+from typing import Any, cast
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from kitchen_core.catalog_schemas import (
+    CommunityCreate,
+    CommunityOut,
+    CommunityPage,
+    CommunityType,
+    CommunityUpdate,
+    CommunityZoneCreate,
+    CommunityZoneOut,
     DishCreate,
     DishOut,
     DishUpdate,
@@ -23,25 +31,24 @@ from kitchen_core.catalog_schemas import (
     MembershipJoin,
     MembershipOut,
     MembershipPage,
-    SocietyCreate,
-    SocietyOut,
-    SocietyPage,
-    SocietyUpdate,
-    TowerCreate,
-    TowerOut,
+    PickupPointOut,
+    ZoneType,
 )
 from kitchen_core.errors import DomainError
 from kitchen_core.models import (
+    Community,
+    CommunityZone,
     Dish,
     Kitchen,
     KitchenMember,
+    ListingPickupPoint,
     Membership,
     MenuListing,
     Order,
     OrderItem,
-    Society,
-    Tower,
+    PickupPoint,
     User,
+    eligible_pickup_point,
     utcnow,
 )
 from sqlalchemy import func, select
@@ -84,29 +91,29 @@ def _page(session: Session, statement, limit: int, offset: int):
     return list(session.scalars(statement.limit(limit).offset(offset))), total or 0
 
 
-def require_active_society(session: Session, society_id: UUID) -> Society:
-    society = _get(session, Society, society_id)
-    if society.status != "active":
+def require_active_community(session: Session, community_id: UUID) -> Community:
+    community = _get(session, Community, community_id)
+    if community.status != "active":
         raise DomainError(
-            409, "society_unavailable", "This society is not accepting activity right now."
+            409, "community_unavailable", "This community is not accepting activity right now."
         )
-    return society
+    return community
 
 
-def require_membership(session: Session, user_id: UUID, society_id: UUID) -> Membership:
+def require_membership(session: Session, user_id: UUID, community_id: UUID) -> Membership:
     user = _get(session, User, user_id)
     membership = session.scalar(
         select(Membership)
         .where(
             Membership.user_id == user_id,
-            Membership.society_id == society_id,
+            Membership.community_id == community_id,
             Membership.status == "active",
         )
         .execution_options(populate_existing=True)
     )
     if membership is None or not user.is_active:
         raise DomainError(
-            403, "membership_required", "An active membership in this society is required."
+            403, "membership_required", "An active membership in this community is required."
         )
     return membership
 
@@ -116,7 +123,7 @@ def require_kitchen_member(session: Session, user_id: UUID, kitchen_id: UUID) ->
     member = session.get(KitchenMember, (kitchen_id, user_id))
     if member is None:
         raise DomainError(403, "kitchen_access_denied", "You do not manage this kitchen.")
-    require_membership(session, user_id, kitchen.society_id)
+    require_membership(session, user_id, kitchen.community_id)
     return kitchen
 
 
@@ -128,38 +135,41 @@ def _require_kitchen_mutation(
     if user_id is None:
         raise DomainError(403, "kitchen_access_denied", "You do not manage this kitchen.")
     kitchen = require_kitchen_member(session, user_id, kitchen_id)
-    require_active_society(session, kitchen.society_id)
+    require_active_community(session, kitchen.community_id)
     if kitchen.status == "suspended":
         raise DomainError(403, "kitchen_suspended", "This kitchen is suspended. Contact support.")
     return kitchen
 
 
-def society_view(session: Session, society: Society) -> SocietyOut:
-    towers = session.scalars(
-        select(Tower).where(Tower.society_id == society.id).order_by(Tower.name)
+def community_view(session: Session, community: Community) -> CommunityOut:
+    zones = session.scalars(
+        select(CommunityZone)
+        .where(CommunityZone.community_id == community.id)
+        .order_by(CommunityZone.name)
     )
-    return SocietyOut(
-        id=society.id,
-        name=society.name,
-        address=society.address,
-        city=society.city,
-        postal_code=society.postal_code,
-        status=society.status,
-        towers=[TowerOut(id=t.id, society_id=t.society_id, name=t.name) for t in towers],
+    return CommunityOut(
+        id=community.id,
+        type=cast(CommunityType, community.type),
+        name=community.name,
+        address=community.address,
+        city=community.city,
+        postal_code=community.postal_code,
+        status=community.status,
+        zones=[zone_view(t) for t in zones],
     )
 
 
 def membership_view(session: Session, membership: Membership, *, admin: bool = False):
-    society = _get(session, Society, membership.society_id)
-    tower = _get(session, Tower, membership.tower_id)
+    community = _get(session, Community, membership.community_id)
+    zone = _get(session, CommunityZone, membership.zone_id) if membership.zone_id else None
     data = dict(
         id=membership.id,
         user_id=membership.user_id,
-        society_id=membership.society_id,
-        society_name=society.name,
-        tower_id=tower.id,
-        tower_name=tower.name,
-        flat=membership.flat,
+        community_id=membership.community_id,
+        community_name=community.name,
+        zone_id=zone.id if zone else None,
+        zone_name=zone.name if zone else None,
+        address_label=membership.address_label,
         status=membership.status,
     )
     if admin:
@@ -169,13 +179,13 @@ def membership_view(session: Session, membership: Membership, *, admin: bool = F
 
 
 def kitchen_view(session: Session, kitchen: Kitchen, *, private: bool = False):
-    tower = _get(session, Tower, kitchen.tower_id)
-    data = dict(
+    zone = _get(session, CommunityZone, kitchen.zone_id) if kitchen.zone_id else None
+    data: dict[str, Any] = dict(
         id=kitchen.id,
-        society_id=kitchen.society_id,
+        community_id=kitchen.community_id,
         name=kitchen.name,
         description=kitchen.description,
-        tower_name=tower.name,
+        zone_name=zone.name if zone else None,
         pickup_enabled=kitchen.pickup_enabled,
         delivery_enabled=kitchen.delivery_enabled,
         delivery_fee_paise=kitchen.delivery_fee_paise,
@@ -184,7 +194,10 @@ def kitchen_view(session: Session, kitchen: Kitchen, *, private: bool = False):
     )
     if private:
         return KitchenOwnOut(
-            **data, tower_id=kitchen.tower_id, flat=kitchen.flat, upi_id=kitchen.upi_id
+            **data,
+            zone_id=kitchen.zone_id,
+            address_label=kitchen.address_label,
+            upi_id=kitchen.upi_id,
         )
     return KitchenOut(**data)
 
@@ -203,9 +216,11 @@ def dish_view(dish: Dish) -> DishOut:
 def listing_view(session: Session, listing: MenuListing) -> ListingOut:
     kitchen = _get(session, Kitchen, listing.kitchen_id)
     dish = _get(session, Dish, listing.dish_id)
-    society = _get(session, Society, kitchen.society_id)
+    community = _get(session, Community, kitchen.community_id)
     remaining = listing.quantity_total - listing.quantity_reserved
+    points = listing_points(session, listing.id, active_only=True)
     return ListingOut(
+        pickup_points=points,
         id=listing.id,
         kitchen=kitchen_view(session, kitchen),
         dish=dish_view(dish),
@@ -225,100 +240,98 @@ def listing_view(session: Session, listing: MenuListing) -> ListingOut:
             and remaining > 0
             and dish.is_active
             and kitchen.status == "approved"
-            and society.status == "active"
+            and community.status == "active"
             and listing.order_cutoff > utcnow()
             and (
-                (listing.pickup_enabled and kitchen.pickup_enabled)
+                (listing.pickup_enabled and kitchen.pickup_enabled and bool(points))
                 or (listing.delivery_enabled and kitchen.delivery_enabled)
             )
         ),
     )
 
 
-def create_society(session: Session, data: SocietyCreate) -> SocietyOut:
-    names = [tower.name.casefold() for tower in data.towers]
+def create_community(session: Session, data: CommunityCreate) -> CommunityOut:
+    names = [zone.name.casefold() for zone in data.zones]
     if len(names) != len(set(names)):
-        raise DomainError(422, "duplicate_tower", "Tower names must be unique within a society.")
-    society = Society(**data.model_dump(exclude={"towers"}), status="draft")
-    session.add(society)
+        raise DomainError(422, "duplicate_zone", "Zone names must be unique within a community.")
+    community = Community(**data.model_dump(exclude={"zones"}), status="draft")
+    session.add(community)
     session.flush()
-    for tower in data.towers:
-        session.add(Tower(society_id=society.id, name=tower.name))
+    for zone in data.zones:
+        validate_zone(session, community.id, zone.parent_zone_id)
+        session.add(CommunityZone(community_id=community.id, **zone.model_dump()))
     session.flush()
-    return society_view(session, society)
+    return community_view(session, community)
 
 
-def update_society(session: Session, society_id: UUID, data: SocietyUpdate) -> SocietyOut:
-    society = _get(session, Society, society_id)
+def update_community(session: Session, community_id: UUID, data: CommunityUpdate) -> CommunityOut:
+    community = _get(session, Community, community_id)
     values = data.model_dump(exclude_unset=True)
-    for field in ("name", "address", "city", "postal_code"):
+    for field in ("name", "city", "type"):
         if field in values and values[field] is None:
             raise DomainError(422, "required_field", f"{field} cannot be empty.")
     for field, value in values.items():
-        setattr(society, field, value)
+        setattr(community, field, value)
     session.flush()
-    return society_view(session, society)
+    return community_view(session, community)
 
 
-def set_society_status(session: Session, society_id: UUID, status: str) -> SocietyOut:
-    society = _locked(session, Society, society_id)
-    if (
-        status == "active"
-        and session.scalar(select(Tower.id).where(Tower.society_id == society_id).limit(1)) is None
-    ):
-        raise DomainError(
-            409, "towers_required", "Add at least one tower before activating the society."
-        )
-    society.status = status
+def set_community_status(session: Session, community_id: UUID, status: str) -> CommunityOut:
+    community = _locked(session, Community, community_id)
+    community.status = status
     session.flush()
-    return society_view(session, society)
+    return community_view(session, community)
 
 
-def add_tower(session: Session, society_id: UUID, data: TowerCreate) -> TowerOut:
-    _locked(session, Society, society_id)
+def add_zone(session: Session, community_id: UUID, data: CommunityZoneCreate) -> CommunityZoneOut:
+    _locked(session, Community, community_id)
     existing = session.scalar(
-        select(Tower.id).where(
-            Tower.society_id == society_id,
-            func.lower(Tower.name) == data.name.lower(),
+        select(CommunityZone.id).where(
+            CommunityZone.community_id == community_id,
+            func.lower(CommunityZone.name) == data.name.lower(),
         )
     )
     if existing is not None:
-        raise DomainError(409, "duplicate_tower", "A tower with this name already exists.")
-    tower = Tower(society_id=society_id, name=data.name)
-    session.add(tower)
+        raise DomainError(409, "duplicate_zone", "A zone with this name already exists.")
+    validate_zone(session, community_id, data.parent_zone_id)
+    zone = CommunityZone(community_id=community_id, **data.model_dump())
+    session.add(zone)
     session.flush()
-    return TowerOut(id=tower.id, society_id=tower.society_id, name=tower.name)
+    return zone_view(zone)
 
 
-def list_societies(
+def list_communities(
     session: Session, query: str | None, limit: int, offset: int, *, admin: bool = False
-) -> SocietyPage:
-    statement = select(Society)
+) -> CommunityPage:
+    statement = select(Community)
     if not admin:
-        statement = statement.where(Society.status == "active")
+        statement = statement.where(Community.status == "active")
     if query:
-        statement = statement.where(Society.name.icontains(query, autoescape=True))
-    societies, total = _page(session, statement.order_by(Society.name, Society.id), limit, offset)
-    return SocietyPage(
-        items=[society_view(session, s) for s in societies], total=total, limit=limit, offset=offset
+        statement = statement.where(Community.name.icontains(query, autoescape=True))
+    communities, total = _page(
+        session, statement.order_by(Community.name, Community.id), limit, offset
+    )
+    return CommunityPage(
+        items=[community_view(session, s) for s in communities],
+        total=total,
+        limit=limit,
+        offset=offset,
     )
 
 
-def join_society(
-    session: Session, user: User, society_id: UUID, data: MembershipJoin
+def join_community(
+    session: Session, user: User, community_id: UUID, data: MembershipJoin
 ) -> MembershipOut:
     # Refresh after acquiring the user lock: an administrator may have deactivated
     # the account while this request waited, even if authentication loaded it earlier.
     user = _locked_active_user(session, user.id)
-    _locked(session, Society, society_id)
-    require_active_society(session, society_id)
-    tower = _get(session, Tower, data.tower_id)
-    if tower.society_id != society_id:
-        raise DomainError(422, "tower_society_mismatch", "Choose a tower in the selected society.")
+    _locked(session, Community, community_id)
+    require_active_community(session, community_id)
+    validate_zone(session, community_id, data.zone_id)
     membership = session.scalar(
         select(Membership)
         .where(
-            Membership.society_id == society_id,
+            Membership.community_id == community_id,
             Membership.user_id == user.id,
         )
         .with_for_update()
@@ -326,26 +339,28 @@ def join_society(
     )
     if membership is not None and membership.status == "suspended":
         raise DomainError(
-            403, "membership_suspended", "Your society membership is suspended. Contact support."
+            403, "membership_suspended", "Your community membership is suspended. Contact support."
         )
     if membership is not None and membership.status == "active":
-        if membership.tower_id != data.tower_id or membership.flat != data.flat:
+        if membership.zone_id != data.zone_id or membership.address_label != data.address_label:
             raise DomainError(
-                409, "membership_exists", "Your membership already uses another tower or flat."
+                409,
+                "membership_exists",
+                "Your membership already uses another home zone or address.",
             )
         return membership_view(session, membership)
     if membership is None:
         membership = Membership(
-            society_id=society_id,
+            community_id=community_id,
             user_id=user.id,
-            tower_id=tower.id,
-            flat=data.flat,
+            zone_id=data.zone_id,
+            address_label=data.address_label,
             status="active",
         )
         session.add(membership)
     else:
-        membership.tower_id = tower.id
-        membership.flat = data.flat
+        membership.zone_id = data.zone_id
+        membership.address_label = data.address_label
         membership.status = "active"
     session.flush()
     return membership_view(session, membership)
@@ -364,12 +379,12 @@ def my_memberships(session: Session, user_id: UUID, limit: int, offset: int) -> 
 
 
 def list_memberships(
-    session: Session, society_id: UUID | None, status: str | None, limit: int, offset: int
+    session: Session, community_id: UUID | None, status: str | None, limit: int, offset: int
 ) -> MembershipPage:
     statement = select(Membership)
-    if society_id:
-        _get(session, Society, society_id)
-        statement = statement.where(Membership.society_id == society_id)
+    if community_id:
+        _get(session, Community, community_id)
+        statement = statement.where(Membership.community_id == community_id)
     if status:
         statement = statement.where(Membership.status == status)
     rows, total = _page(
@@ -390,7 +405,7 @@ def set_membership_status(session: Session, membership_id: UUID, status: str) ->
     if membership is None:
         raise DomainError(404, "not_found", "Membership was not found.")
     if status == "active":
-        require_active_society(session, membership.society_id)
+        require_active_community(session, membership.community_id)
         if not _get(session, User, membership.user_id).is_active:
             raise DomainError(409, "user_inactive", "An inactive account cannot be activated.")
     membership.status = status
@@ -402,7 +417,7 @@ def set_membership_status(session: Session, membership_id: UUID, status: str) ->
                 .join(KitchenMember)
                 .where(
                     KitchenMember.user_id == membership.user_id,
-                    Kitchen.society_id == membership.society_id,
+                    Kitchen.community_id == membership.community_id,
                 )
                 .order_by(Kitchen.id)
                 .with_for_update(key_share=True, of=Kitchen)
@@ -416,7 +431,7 @@ def set_membership_status(session: Session, membership_id: UUID, status: str) ->
                 .join(
                     Membership,
                     (Membership.user_id == KitchenMember.user_id)
-                    & (Membership.society_id == kitchen.society_id),
+                    & (Membership.community_id == kitchen.community_id),
                 )
                 .where(
                     KitchenMember.kitchen_id == kitchen.id,
@@ -434,25 +449,39 @@ def set_membership_status(session: Session, membership_id: UUID, status: str) ->
 
 def create_kitchen(session: Session, user: User, data: KitchenCreate) -> KitchenOwnOut:
     user = _locked_active_user(session, user.id)
-    require_active_society(session, data.society_id)
-    membership = require_membership(session, user.id, data.society_id)
+    require_active_community(session, data.community_id)
+    membership = require_membership(session, user.id, data.community_id)
     existing = session.scalar(
         select(Kitchen.id)
         .join(KitchenMember)
         .where(
             KitchenMember.user_id == user.id,
-            Kitchen.society_id == data.society_id,
+            Kitchen.community_id == data.community_id,
         )
         .limit(1)
     )
     if existing:
-        raise DomainError(409, "kitchen_exists", "You already manage a kitchen in this society.")
-    kitchen = Kitchen(
-        **data.model_dump(), tower_id=membership.tower_id, flat=membership.flat, status="pending"
-    )
+        raise DomainError(409, "kitchen_exists", "You already manage a kitchen in this community.")
+    values = data.model_dump()
+    if "zone_id" not in data.model_fields_set:
+        values["zone_id"] = membership.zone_id
+    if "address_label" not in data.model_fields_set:
+        values["address_label"] = membership.address_label
+    validate_zone(session, data.community_id, values["zone_id"])
+    kitchen = Kitchen(**values, status="pending")
     session.add(kitchen)
     session.flush()
     session.add(KitchenMember(kitchen_id=kitchen.id, user_id=user.id, role="owner"))
+    if kitchen.address_label:
+        session.add(
+            PickupPoint(
+                community_id=kitchen.community_id,
+                kitchen_id=kitchen.id,
+                zone_id=kitchen.zone_id,
+                name=kitchen.name,
+                address_label=kitchen.address_label,
+            )
+        )
     session.flush()
     return kitchen_view(session, kitchen, private=True)
 
@@ -467,6 +496,8 @@ def update_kitchen(
 ) -> KitchenOwnOut:
     kitchen = _require_kitchen_mutation(session, user_id, kitchen_id, admin=admin)
     values = data.model_dump(exclude_unset=True)
+    if "zone_id" in values:
+        validate_zone(session, kitchen.community_id, values["zone_id"])
     for field in ("name", "pickup_enabled", "delivery_enabled", "delivery_fee_paise"):
         if field in values and values[field] is None:
             raise DomainError(422, "required_field", f"{field} cannot be empty.")
@@ -494,12 +525,12 @@ def my_kitchens(session: Session, user_id: UUID, limit: int, offset: int) -> lis
 
 
 def list_kitchens(
-    session: Session, user_id: UUID, society_id: UUID, query: str | None, limit: int, offset: int
+    session: Session, user_id: UUID, community_id: UUID, query: str | None, limit: int, offset: int
 ) -> KitchenPage:
-    require_membership(session, user_id, society_id)
-    require_active_society(session, society_id)
+    require_membership(session, user_id, community_id)
+    require_active_community(session, community_id)
     statement = select(Kitchen).where(
-        Kitchen.society_id == society_id, Kitchen.status == "approved"
+        Kitchen.community_id == community_id, Kitchen.status == "approved"
     )
     if query:
         statement = statement.where(Kitchen.name.icontains(query, autoescape=True))
@@ -511,19 +542,19 @@ def list_kitchens(
 
 def get_kitchen(session: Session, user_id: UUID, kitchen_id: UUID) -> KitchenOut:
     kitchen = _get(session, Kitchen, kitchen_id)
-    require_membership(session, user_id, kitchen.society_id)
-    require_active_society(session, kitchen.society_id)
+    require_membership(session, user_id, kitchen.community_id)
+    require_active_community(session, kitchen.community_id)
     if kitchen.status != "approved":
         raise DomainError(404, "not_found", "Kitchen was not found.")
     return kitchen_view(session, kitchen)
 
 
 def admin_kitchens(
-    session: Session, society_id: UUID | None, status: str | None, limit: int, offset: int
+    session: Session, community_id: UUID | None, status: str | None, limit: int, offset: int
 ) -> KitchenAdminPage:
     statement = select(Kitchen)
-    if society_id:
-        statement = statement.where(Kitchen.society_id == society_id)
+    if community_id:
+        statement = statement.where(Kitchen.community_id == community_id)
     if status:
         statement = statement.where(Kitchen.status == status)
     rows, total = _page(session, statement.order_by(Kitchen.created_at, Kitchen.id), limit, offset)
@@ -544,14 +575,14 @@ def approve_kitchen(session: Session, kitchen_id: UUID, data: KitchenApprove) ->
     )
     if kitchen is None:
         raise DomainError(404, "not_found", "Kitchen was not found.")
-    require_active_society(session, kitchen.society_id)
+    require_active_community(session, kitchen.community_id)
     active_owner = session.scalar(
         select(KitchenMember.user_id)
         .join(User, User.id == KitchenMember.user_id)
         .join(
             Membership,
             (Membership.user_id == KitchenMember.user_id)
-            & (Membership.society_id == kitchen.society_id),
+            & (Membership.community_id == kitchen.community_id),
         )
         .where(
             KitchenMember.kitchen_id == kitchen_id,
@@ -563,7 +594,9 @@ def approve_kitchen(session: Session, kitchen_id: UUID, data: KitchenApprove) ->
     )
     if active_owner is None:
         raise DomainError(
-            409, "active_owner_required", "The kitchen must have an active resident owner."
+            409,
+            "active_owner_required",
+            "The kitchen must have an active community member as owner.",
         )
     kitchen.fssai_number = data.fssai_number
     kitchen.status = "approved"
@@ -701,11 +734,22 @@ def create_listing(
 ) -> ListingOut:
     kitchen = _require_kitchen_mutation(session, user_id, kitchen_id, admin=admin)
     if data.status == "published":
-        require_active_society(session, kitchen.society_id)
+        require_active_community(session, kitchen.community_id)
     dish = _get(session, Dish, data.dish_id)
     if dish.kitchen_id != kitchen_id or not dish.is_active:
         raise DomainError(422, "dish_kitchen_mismatch", "Choose an active dish from your kitchen.")
-    values = data.model_dump()
+    values = data.model_dump(exclude={"pickup_point_ids"})
+    point_ids = data.pickup_point_ids
+    if not point_ids and data.pickup_enabled:
+        point_ids = list(
+            session.scalars(
+                select(PickupPoint.id)
+                .where(PickupPoint.kitchen_id == kitchen_id, eligible_pickup_point())
+                .order_by(PickupPoint.created_at, PickupPoint.id)
+                .limit(1)
+            )
+        )
+    validate_listing_points(session, kitchen, point_ids, data.pickup_enabled)
     _validate_listing(
         kitchen,
         values,
@@ -714,6 +758,7 @@ def create_listing(
     listing = MenuListing(kitchen_id=kitchen_id, **values, quantity_reserved=0)
     session.add(listing)
     session.flush()
+    replace_listing_points(session, listing, kitchen, point_ids)
     return listing_view(session, listing)
 
 
@@ -734,6 +779,11 @@ def update_listing(
     if listing is None:
         raise DomainError(404, "not_found", "Listing was not found.")
     changes = data.model_dump(exclude_unset=True)
+    point_ids = changes.pop("pickup_point_ids", None)
+    if "pickup_point_ids" in data.model_fields_set and point_ids is None:
+        raise DomainError(422, "required_field", "Pickup points cannot be null; use an empty list.")
+    if changes.get("pickup_enabled") is False and point_ids is None:
+        point_ids = []
     cancelling = changes.get("status") == "cancelled"
     if cancelling:
         # Closing an existing menu does not require eligibility to sell new food.
@@ -772,6 +822,11 @@ def update_listing(
                 409, "live_orders", "Resolve live orders before cancelling this listing."
             )
     if listing.quantity_reserved:
+        current_ids = {p.id for p in listing_points(session, listing.id)}
+        if point_ids is not None and set(point_ids) != current_ids:
+            raise DomainError(
+                409, "committed_listing", "Pickup points cannot change after portions are reserved."
+            )
         fixed_fields = {
             "service_date",
             "price_paise",
@@ -796,11 +851,11 @@ def update_listing(
     values = {
         field: changes.get(field, getattr(listing, field))
         for field in ListingCreate.model_fields
-        if field != "dish_id"
+        if field not in {"dish_id", "pickup_point_ids"}
     }
     publishing = values["status"] == "published" and listing.status != "published"
     if publishing:
-        require_active_society(session, kitchen.society_id)
+        require_active_community(session, kitchen.community_id)
         if not _get(session, Dish, listing.dish_id).is_active:
             raise DomainError(
                 422, "dish_kitchen_mismatch", "Choose an active dish from your kitchen."
@@ -812,6 +867,15 @@ def update_listing(
         publishing=publishing,
         cancelling=cancelling,
     )
+    if point_ids is not None:
+        validate_listing_points(session, kitchen, point_ids, values["pickup_enabled"])
+        replace_listing_points(session, listing, kitchen, point_ids)
+    elif publishing and values["pickup_enabled"]:
+        validate_listing_points(
+            session, kitchen, [p.id for p in listing_points(session, listing.id)], True
+        )
+    elif not cancelling and values["pickup_enabled"] and not listing_points(session, listing.id):
+        raise DomainError(422, "pickup_points_required", "Choose at least one pickup point.")
     for field, value in values.items():
         setattr(listing, field, value)
     session.flush()
@@ -827,8 +891,8 @@ def cancel_listing(
 def get_listing(session: Session, user_id: UUID, listing_id: UUID) -> ListingOut:
     listing = _get(session, MenuListing, listing_id)
     kitchen = _get(session, Kitchen, listing.kitchen_id)
-    require_membership(session, user_id, kitchen.society_id)
-    require_active_society(session, kitchen.society_id)
+    require_membership(session, user_id, kitchen.community_id)
+    require_active_community(session, kitchen.community_id)
     dish = _get(session, Dish, listing.dish_id)
     if listing.status != "published" or kitchen.status != "approved" or not dish.is_active:
         raise DomainError(404, "not_found", "Listing was not found.")
@@ -838,7 +902,7 @@ def get_listing(session: Session, user_id: UUID, listing_id: UUID) -> ListingOut
 def list_listings(
     session: Session,
     user_id: UUID,
-    society_id: UUID,
+    community_id: UUID,
     start: date,
     end: date,
     limit: int,
@@ -847,7 +911,7 @@ def list_listings(
     kitchen_id: UUID | None = None,
     owned: bool = False,
 ) -> ListingPage:
-    require_membership(session, user_id, society_id)
+    require_membership(session, user_id, community_id)
     if end < start or (end - start).days > 31:
         raise DomainError(422, "invalid_date_range", "Choose a date range of up to 31 days.")
     statement = (
@@ -855,22 +919,22 @@ def list_listings(
         .join(Kitchen)
         .join(Dish, Dish.id == MenuListing.dish_id)
         .where(
-            Kitchen.society_id == society_id,
+            Kitchen.community_id == community_id,
             MenuListing.service_date >= start,
             MenuListing.service_date <= end,
         )
     )
     if kitchen_id:
         kitchen = _get(session, Kitchen, kitchen_id)
-        if kitchen.society_id != society_id:
-            raise DomainError(404, "not_found", "Kitchen was not found in this society.")
+        if kitchen.community_id != community_id:
+            raise DomainError(404, "not_found", "Kitchen was not found in this community.")
         statement = statement.where(Kitchen.id == kitchen_id)
     if owned:
         if kitchen_id is None:
             raise DomainError(422, "kitchen_required", "Choose the kitchen you manage.")
         require_kitchen_member(session, user_id, kitchen_id)
     else:
-        require_active_society(session, society_id)
+        require_active_community(session, community_id)
         statement = statement.where(
             Kitchen.status == "approved",
             MenuListing.status == "published",
@@ -882,3 +946,85 @@ def list_listings(
     return ListingPage(
         items=[listing_view(session, m) for m in rows], total=total, limit=limit, offset=offset
     )
+
+
+def zone_view(zone: CommunityZone) -> CommunityZoneOut:
+    return CommunityZoneOut(
+        id=zone.id,
+        community_id=zone.community_id,
+        name=zone.name,
+        parent_zone_id=zone.parent_zone_id,
+        zone_type=cast(ZoneType, zone.zone_type),
+        active=zone.active,
+    )
+
+
+def validate_zone(session: Session, community_id: UUID, zone_id: UUID | None):
+    if zone_id is None:
+        return
+    zone = _get(session, CommunityZone, zone_id)
+    if zone.community_id != community_id or not zone.active:
+        raise DomainError(
+            422, "zone_community_mismatch", "Choose an active zone in this community."
+        )
+
+
+def listing_points(
+    session: Session, listing_id: UUID, *, active_only: bool = False
+) -> list[PickupPointOut]:
+    statement = (
+        select(PickupPoint)
+        .join(ListingPickupPoint, ListingPickupPoint.pickup_point_id == PickupPoint.id)
+        .where(ListingPickupPoint.listing_id == listing_id)
+    )
+    if active_only:
+        statement = statement.where(eligible_pickup_point())
+    return [
+        PickupPointOut.model_validate(p)
+        for p in session.scalars(statement.order_by(PickupPoint.name, PickupPoint.id))
+    ]
+
+
+def validate_listing_points(
+    session: Session, kitchen: Kitchen, point_ids: list[UUID], pickup_enabled: bool
+):
+    if len(set(point_ids)) != len(point_ids):
+        raise DomainError(422, "duplicate_pickup_point", "Choose each pickup point once.")
+    if pickup_enabled and not point_ids:
+        raise DomainError(422, "pickup_points_required", "Choose at least one pickup point.")
+    if not pickup_enabled and point_ids:
+        raise DomainError(422, "pickup_disabled", "Enable pickup before choosing pickup points.")
+    points = list(
+        session.scalars(
+            select(PickupPoint)
+            .where(PickupPoint.id.in_(point_ids), eligible_pickup_point())
+            .order_by(PickupPoint.id)
+            .with_for_update(read=True)
+        )
+    )
+    if len(points) != len(point_ids) or any(
+        p.community_id != kitchen.community_id or not p.active for p in points
+    ):
+        raise DomainError(
+            422, "pickup_point_unavailable", "Choose active pickup points in this community."
+        )
+
+
+def replace_listing_points(
+    session: Session, listing: MenuListing, kitchen: Kitchen, point_ids: list[UUID]
+):
+    from sqlalchemy import delete
+
+    session.execute(delete(ListingPickupPoint).where(ListingPickupPoint.listing_id == listing.id))
+    session.add_all(
+        [
+            ListingPickupPoint(
+                listing_id=listing.id,
+                pickup_point_id=point_id,
+                kitchen_id=kitchen.id,
+                community_id=kitchen.community_id,
+            )
+            for point_id in point_ids
+        ]
+    )
+    session.flush()

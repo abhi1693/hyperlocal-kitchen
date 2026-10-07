@@ -1,4 +1,4 @@
-"""Integration checks for society onboarding and committed food listings."""
+"""Integration checks for community onboarding and committed food listings."""
 
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
@@ -10,13 +10,14 @@ from kitchen_core import catalog
 from kitchen_core.catalog_schemas import MembershipJoin
 from kitchen_core.errors import DomainError
 from kitchen_core.models import (
+    Community,
+    CommunityZone,
     Dish,
     Kitchen,
     KitchenMember,
     Membership,
     MenuListing,
-    Society,
-    Tower,
+    PickupPoint,
     User,
 )
 from kitchen_http.auth import require_user
@@ -29,15 +30,15 @@ def as_user(client, user):
 
 @pytest.fixture
 def market(session):
-    society = Society(
-        name="Garden Society",
+    community = Community(
+        name="Garden Community",
         address="Garden Road",
         city="Pune",
         postal_code="411001",
         status="active",
     )
-    other = Society(
-        name="Other Society",
+    other = Community(
+        name="Other Community",
         address="Other Road",
         city="Pune",
         postal_code="411002",
@@ -64,42 +65,42 @@ def market(session):
         name="Other resident",
         is_active=True,
     )
-    session.add_all([society, other, owner, customer, outsider])
+    session.add_all([community, other, owner, customer, outsider])
     session.flush()
-    tower = Tower(society_id=society.id, name="Tower B")
-    other_tower = Tower(society_id=other.id, name="Tower Z")
-    session.add_all([tower, other_tower])
+    zone = CommunityZone(community_id=community.id, name="Zone B")
+    other_zone = CommunityZone(community_id=other.id, name="Zone Z")
+    session.add_all([zone, other_zone])
     session.flush()
     session.add_all(
         [
             Membership(
-                society_id=society.id,
+                community_id=community.id,
                 user_id=owner.id,
-                tower_id=tower.id,
-                flat="B-1204",
+                zone_id=zone.id,
+                address_label="B-1204",
                 status="active",
             ),
             Membership(
-                society_id=society.id,
+                community_id=community.id,
                 user_id=customer.id,
-                tower_id=tower.id,
-                flat="B-1001",
+                zone_id=zone.id,
+                address_label="B-1001",
                 status="active",
             ),
             Membership(
-                society_id=other.id,
+                community_id=other.id,
                 user_id=outsider.id,
-                tower_id=other_tower.id,
-                flat="Z-101",
+                zone_id=other_zone.id,
+                address_label="Z-101",
                 status="active",
             ),
         ]
     )
     kitchen = Kitchen(
-        society_id=society.id,
+        community_id=community.id,
         name="Manisha's Kitchen",
-        tower_id=tower.id,
-        flat="B-1204",
+        zone_id=zone.id,
+        address_label="B-1204",
         status="approved",
         pickup_enabled=True,
         delivery_enabled=False,
@@ -107,6 +108,15 @@ def market(session):
     )
     session.add(kitchen)
     session.flush()
+    session.add(
+        PickupPoint(
+            community_id=community.id,
+            kitchen_id=kitchen.id,
+            zone_id=zone.id,
+            name=kitchen.name,
+            address_label=kitchen.address_label,
+        )
+    )
     session.add(KitchenMember(kitchen_id=kitchen.id, user_id=owner.id, role="owner"))
     dish = Dish(
         kitchen_id=kitchen.id,
@@ -116,10 +126,10 @@ def market(session):
     session.add(dish)
     session.commit()
     return dict(
-        society=society,
+        community=community,
         other=other,
-        tower=tower,
-        other_tower=other_tower,
+        zone=zone,
+        other_zone=other_zone,
         owner=owner,
         customer=customer,
         outsider=outsider,
@@ -129,7 +139,7 @@ def market(session):
 
 
 def listing_payload(market, *, days=1):
-    # UTC 07:30 is 13:00 in the society timezone; use tomorrow to avoid clock-sensitive tests.
+    # UTC 07:30 is 13:00 in the community timezone; use tomorrow to avoid clock-sensitive tests.
     ready = datetime.now(UTC).replace(hour=7, minute=30, second=0, microsecond=0) + timedelta(
         days=days
     )
@@ -156,45 +166,45 @@ def publish(client, market, payload=None):
     return response.json()
 
 
-def test_platform_only_society_creation_requires_towers_before_activation(
+def test_platform_only_community_creation_allows_activation_without_zones(
     admin_client, client, session
 ):
     response = admin_client.post(
-        "/api/v1/societies",
+        "/api/v1/communities",
         json=dict(
-            name="Pilot Society",
+            name="Pilot Community",
             address="Pilot Road",
             city="Pune",
             postal_code="411001",
         ),
     )
     assert response.status_code == 201, response.text
-    society_id = response.json()["id"]
+    community_id = response.json()["id"]
     assert response.json()["status"] == "draft"
-    assert admin_client.post(f"/api/v1/societies/{society_id}/activate").status_code == 409
+    assert admin_client.post(f"/api/v1/communities/{community_id}/activate").status_code == 200
     assert (
         admin_client.post(
-            f"/api/v1/societies/{society_id}/towers", json={"name": "Tower A"}
+            f"/api/v1/communities/{community_id}/zones", json={"name": "Zone A"}
         ).status_code
         == 201
     )
     assert (
         admin_client.post(
-            f"/api/v1/societies/{society_id}/towers", json={"name": "tower a"}
+            f"/api/v1/communities/{community_id}/zones", json={"name": "zone a"}
         ).status_code
         == 409
     )
-    assert admin_client.post(f"/api/v1/societies/{society_id}/activate").status_code == 200
-    # The resident API contains no society or tower write route.
-    assert client.post("/api/v1/societies", json={"name": "Unapproved"}).status_code == 405
+    assert admin_client.post(f"/api/v1/communities/{community_id}/activate").status_code == 200
+    # The resident API contains no community or zone write route.
+    assert client.post("/api/v1/communities", json={"name": "Unapproved"}).status_code == 405
     assert (
-        client.post(f"/api/v1/societies/{society_id}/towers", json={"name": "Bad"}).status_code
+        client.post(f"/api/v1/communities/{community_id}/zones", json={"name": "Bad"}).status_code
         == 405
     )
 
 
 @pytest.mark.parametrize("phone", [None, "+919000000004"])
-def test_society_join_immediately_enables_food_and_orders(client, session, market, phone):
+def test_community_join_immediately_enables_food_and_orders(client, session, market, phone):
     food = publish(client, market)
     newcomer = User(
         oidc_subject="catalog-newcomer",
@@ -205,24 +215,26 @@ def test_society_join_immediately_enables_food_and_orders(client, session, marke
     )
     session.add(newcomer)
     session.commit()
-    society_id = market["society"].id
-    data = dict(tower_id=str(market["tower"].id), flat="B-502")
+    community_id = market["community"].id
+    data = dict(zone_id=str(market["zone"].id), address_label="B-502")
     as_user(client, newcomer)
-    joined = client.post(f"/api/v1/societies/{society_id}/join", json=data)
+    joined = client.post(f"/api/v1/communities/{community_id}/join", json=data)
     assert joined.status_code == 201, joined.text
     assert joined.json()["status"] == "active"
-    repeated = client.post(f"/api/v1/societies/{society_id}/join", json=data)
+    repeated = client.post(f"/api/v1/communities/{community_id}/join", json=data)
     assert repeated.status_code == 201, repeated.text
     assert repeated.json()["id"] == joined.json()["id"]
     assert (
         session.scalar(
             select(func.count())
             .select_from(Membership)
-            .where(Membership.user_id == newcomer.id, Membership.society_id == society_id)
+            .where(Membership.user_id == newcomer.id, Membership.community_id == community_id)
         )
         == 1
     )
-    menu = client.get(f"/api/v1/societies/{society_id}/menu", params={"date": food["service_date"]})
+    menu = client.get(
+        f"/api/v1/communities/{community_id}/menu", params={"date": food["service_date"]}
+    )
     assert menu.status_code == 200, menu.text
     assert [item["id"] for item in menu.json()["items"]] == [food["id"]]
     assert menu.json()["items"][0]["is_orderable"] is True
@@ -230,23 +242,24 @@ def test_society_join_immediately_enables_food_and_orders(client, session, marke
     assert client.get(f"/api/v1/kitchens/{market['kitchen'].id}").status_code == 200
     order = client.post(
         "/api/v1/orders",
-        headers={"Idempotency-Key": "instant-society-join"},
+        headers={"Idempotency-Key": "instant-community-join"},
         json={"items": [{"menu_listing_id": food["id"], "quantity": 1}]},
     )
     assert order.status_code == 201, order.text
     assert order.json()["customer_id"] == str(newcomer.id)
     assert order.json()["status"] == "pending"
-    assert order.json()["delivery_address"]["flat"] == "B-502"
+    assert order.json()["delivery_address"] is None
+    assert order.json()["fulfillment_snapshot"]["address_label"] == "B-1204"
     # Repeating onboarding does not silently move an existing resident's address.
-    data["flat"] = "B-999"
-    assert client.post(f"/api/v1/societies/{society_id}/join", json=data).status_code == 409
+    data["address_label"] = "B-999"
+    assert client.post(f"/api/v1/communities/{community_id}/join", json=data).status_code == 409
 
 
-def test_cross_society_tower_and_listing_ids_are_rejected(client, session, market):
+def test_cross_community_zone_and_listing_ids_are_rejected(client, session, market):
     as_user(client, market["outsider"])
     response = client.post(
-        f"/api/v1/societies/{market['society'].id}/join",
-        json={"tower_id": str(market["other_tower"].id), "flat": "Z-101"},
+        f"/api/v1/communities/{market['community'].id}/join",
+        json={"zone_id": str(market["other_zone"].id), "address_label": "Z-101"},
     )
     assert response.status_code == 422
     assert (
@@ -255,7 +268,7 @@ def test_cross_society_tower_and_listing_ids_are_rejected(client, session, marke
             .select_from(Membership)
             .where(
                 Membership.user_id == market["outsider"].id,
-                Membership.society_id == market["society"].id,
+                Membership.community_id == market["community"].id,
             )
         )
         == 0
@@ -272,10 +285,10 @@ def test_cross_society_tower_and_listing_ids_are_rejected(client, session, marke
     )
 
 
-def test_join_waits_for_society_pause_and_does_not_create_membership(session_factory, market):
-    society_id = market["society"].id
+def test_join_waits_for_community_pause_and_does_not_create_membership(session_factory, market):
+    community_id = market["community"].id
     newcomer_id = market["outsider"].id
-    tower_id = market["tower"].id
+    zone_id = market["zone"].id
     request_started = Event()
     request_finished = Event()
     request_pid = {}
@@ -285,17 +298,17 @@ def test_join_waits_for_society_pause_and_does_not_create_membership(session_fac
             request_session.execute(text("SET LOCAL lock_timeout = '5s'"))
             request_session.execute(text("SET LOCAL statement_timeout = '8s'"))
             user = request_session.get(User, newcomer_id)
-            # A request may already hold the society's previously active state.
-            previous_society = request_session.get(Society, society_id)
-            assert previous_society.status == "active"
+            # A request may already hold the community's previously active state.
+            previous_community = request_session.get(Community, community_id)
+            assert previous_community.status == "active"
             request_pid["value"] = request_session.scalar(select(func.pg_backend_pid()))
             request_started.set()
             try:
-                catalog.join_society(
+                catalog.join_community(
                     request_session,
                     user,
-                    society_id,
-                    MembershipJoin(tower_id=tower_id, flat="B-502"),
+                    community_id,
+                    MembershipJoin(zone_id=zone_id, address_label="B-502"),
                 )
                 request_session.commit()
                 return None
@@ -306,10 +319,10 @@ def test_join_waits_for_society_pause_and_does_not_create_membership(session_fac
                 request_finished.set()
 
     with session_factory() as administrator, ThreadPoolExecutor(max_workers=1) as pool:
-        society = administrator.scalar(
-            select(Society).where(Society.id == society_id).with_for_update()
+        community = administrator.scalar(
+            select(Community).where(Community.id == community_id).with_for_update()
         )
-        society.status = "paused"
+        community.status = "paused"
         administrator.flush()
         administrator_pid = administrator.scalar(select(func.pg_backend_pid()))
         future = pool.submit(joining_resident)
@@ -321,22 +334,22 @@ def test_join_waits_for_society_pause_and_does_not_create_membership(session_fac
                 if administrator_pid in blockers:
                     break
                 assert not request_finished.is_set(), "Join finished before the pause committed"
-                assert monotonic() < deadline, "Join did not wait on the society transaction"
+                assert monotonic() < deadline, "Join did not wait on the community transaction"
                 request_finished.wait(timeout=0.01)
             # PostgreSQL confirms this transaction blocks the resident; no sleep
             # or thread-scheduling assumption determines when to commit the pause.
             assert not future.done()
             administrator.commit()
-            assert future.result(timeout=5) == "society_unavailable"
+            assert future.result(timeout=5) == "community_unavailable"
         finally:
             administrator.rollback()
     with session_factory() as verification:
-        assert verification.get(Society, society_id).status == "paused"
+        assert verification.get(Community, community_id).status == "paused"
         assert (
             verification.scalar(
                 select(Membership.id).where(
                     Membership.user_id == newcomer_id,
-                    Membership.society_id == society_id,
+                    Membership.community_id == community_id,
                 )
             )
             is None
@@ -362,12 +375,12 @@ def test_kitchen_approval_and_discovery_privacy(admin_client, client, session, m
     )
     food = publish(client, market)
     public = food["kitchen"]
-    assert public["tower_name"] == "Tower B"
+    assert public["zone_name"] == "Zone B"
     assert public["fssai_number"] == "12345678901234"
-    assert "flat" not in public and "phone" not in public and "upi_id" not in public
+    assert "address_label" not in public and "phone" not in public and "upi_id" not in public
     as_user(client, market["owner"])
     own = client.get("/api/v1/me/kitchens").json()[0]
-    assert own["flat"] == "B-1204"
+    assert own["address_label"] == "B-1204"
     changed = client.patch(
         f"/api/v1/kitchens/{kitchen.id}", json={"fssai_number": "98765432109876"}
     )
@@ -474,21 +487,24 @@ def test_kitchen_delivery_fee_is_used_for_listings_and_pickup_stays_free(client,
 def test_membership_suspension_and_bounded_feed(admin_client, client, session, market):
     food = publish(client, market)
     as_user(client, market["customer"])
-    assert client.get(f"/api/v1/societies/{market['society'].id}/menu?limit=101").status_code == 422
+    assert (
+        client.get(f"/api/v1/communities/{market['community'].id}/menu?limit=101").status_code
+        == 422
+    )
     membership = session.scalar(
         select(Membership).where(Membership.user_id == market["customer"].id)
     )
     assert admin_client.post(f"/api/v1/memberships/{membership.id}/suspend").status_code == 200
     assert client.get(f"/api/v1/menu-listings/{food['id']}").status_code == 403
-    for flat in (membership.flat, "B-999"):
+    for address_label in (membership.address_label, "B-999"):
         rejoin = client.post(
-            f"/api/v1/societies/{market['society'].id}/join",
-            json={"tower_id": str(market["tower"].id), "flat": flat},
+            f"/api/v1/communities/{market['community'].id}/join",
+            json={"zone_id": str(market["zone"].id), "address_label": address_label},
         )
         assert rejoin.status_code == 403, rejoin.text
     session.expire_all()
     assert session.get(Membership, membership.id).status == "suspended"
-    assert session.get(Membership, membership.id).flat == "B-1001"
+    assert session.get(Membership, membership.id).address_label == "B-1001"
     restored = admin_client.post(f"/api/v1/memberships/{membership.id}/activate")
     assert restored.status_code == 200, restored.text
     assert restored.json()["status"] == "active"
@@ -512,7 +528,7 @@ def test_suspending_last_active_kitchen_owner_stops_orders(
     membership = session.scalar(
         select(Membership).where(
             Membership.user_id == market["owner"].id,
-            Membership.society_id == market["society"].id,
+            Membership.community_id == market["community"].id,
         )
     )
     response = admin_client.post(f"/api/v1/memberships/{membership.id}/suspend")

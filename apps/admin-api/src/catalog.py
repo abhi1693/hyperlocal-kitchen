@@ -1,4 +1,4 @@
-"""Society and resident administration, protected at each resource router."""
+"""Community and resident administration, protected at each resource router."""
 
 from typing import Literal
 from uuid import UUID
@@ -6,153 +6,170 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Response
 from kitchen_admin_api.dependencies import DB
 from kitchen_admin_api.pagination import Listing, Page, paginate, record
-from kitchen_core import admin_people, catalog
+from kitchen_core import admin_people, catalog, pickup_points
 from kitchen_core.admin_people_schemas import (
+    CommunityZoneUpdate,
     MembershipCreate,
     MembershipUpdate,
-    TowerUpdate,
 )
 from kitchen_core.catalog_schemas import (
+    CommunityCreate,
+    CommunityOut,
+    CommunityUpdate,
+    CommunityZoneCreate,
+    CommunityZoneOut,
     MembershipAdminOut,
-    SocietyCreate,
-    SocietyOut,
-    SocietyUpdate,
-    TowerCreate,
-    TowerOut,
+    PickupPointCreate,
+    PickupPointOut,
+    PickupPointUpdate,
 )
-from kitchen_core.models import Membership, Society, Tower, User
+from kitchen_core.models import Community, CommunityZone, Membership, User
 from kitchen_http.auth import require_admin
 from sqlalchemy import or_, select
 
-societies_router = APIRouter(
-    prefix="/societies", tags=["admin-societies"], dependencies=[Depends(require_admin)]
+communities_router = APIRouter(
+    prefix="/communities", tags=["admin-communities"], dependencies=[Depends(require_admin)]
 )
-towers_router = APIRouter(
-    prefix="/towers", tags=["admin-towers"], dependencies=[Depends(require_admin)]
+zones_router = APIRouter(
+    prefix="/zones", tags=["admin-zones"], dependencies=[Depends(require_admin)]
 )
 memberships_router = APIRouter(
     prefix="/memberships", tags=["admin-memberships"], dependencies=[Depends(require_admin)]
 )
 
 
-@societies_router.get("", response_model=Page[SocietyOut], operation_id="admin_list_societies")
-def list_societies(
+@communities_router.get(
+    "", response_model=Page[CommunityOut], operation_id="admin_list_communities"
+)
+def list_communities(
     session: DB, query: Listing, status: Literal["draft", "active", "paused"] | None = None
 ):
-    statement = select(Society)
+    statement = select(Community)
     if query.q:
         statement = statement.where(
             or_(
-                Society.name.icontains(query.q, autoescape=True),
-                Society.city.icontains(query.q, autoescape=True),
+                Community.name.icontains(query.q, autoescape=True),
+                Community.city.icontains(query.q, autoescape=True),
             )
         )
     if status:
-        statement = statement.where(Society.status == status)
+        statement = statement.where(Community.status == status)
     page = paginate(
         session,
         statement,
         query,
-        {"created_at": Society.created_at, "name": Society.name, "city": Society.city},
+        {"created_at": Community.created_at, "name": Community.name, "city": Community.city},
     )
-    page["items"] = [catalog.society_view(session, society) for society in page["items"]]
+    page["items"] = [catalog.community_view(session, community) for community in page["items"]]
     return page
 
 
-@societies_router.post(
-    "", response_model=SocietyOut, status_code=201, operation_id="admin_create_society"
+@communities_router.post(
+    "", response_model=CommunityOut, status_code=201, operation_id="admin_create_community"
 )
-def create_society(data: SocietyCreate, session: DB):
-    return catalog.create_society(session, data)
+def create_community(data: CommunityCreate, session: DB):
+    return catalog.create_community(session, data)
 
 
-@societies_router.get("/{society_id}", response_model=SocietyOut, operation_id="admin_get_society")
-def get_society(society_id: UUID, session: DB):
-    return catalog.society_view(session, record(session, Society, society_id))
-
-
-@societies_router.patch(
-    "/{society_id}", response_model=SocietyOut, operation_id="admin_update_society"
+@communities_router.get(
+    "/{community_id}", response_model=CommunityOut, operation_id="admin_get_community"
 )
-def update_society(society_id: UUID, data: SocietyUpdate, session: DB):
-    record(session, Society, society_id, lock=True)
-    return catalog.update_society(session, society_id, data)
+def get_community(community_id: UUID, session: DB):
+    return catalog.community_view(session, record(session, Community, community_id))
 
 
-@societies_router.delete(
-    "/{society_id}", status_code=204, response_class=Response, operation_id="admin_delete_society"
+@communities_router.patch(
+    "/{community_id}", response_model=CommunityOut, operation_id="admin_update_community"
 )
-def delete_society(society_id: UUID, session: DB):
-    admin_people.delete_society(session, society_id)
+def update_community(community_id: UUID, data: CommunityUpdate, session: DB):
+    record(session, Community, community_id, lock=True)
+    return catalog.update_community(session, community_id, data)
+
+
+@communities_router.delete(
+    "/{community_id}",
+    status_code=204,
+    response_class=Response,
+    operation_id="admin_delete_community",
+)
+def delete_community(community_id: UUID, session: DB):
+    admin_people.delete_community(session, community_id)
     return Response(status_code=204)
 
 
-@societies_router.post(
-    "/{society_id}/activate", response_model=SocietyOut, operation_id="admin_activate_society"
+@communities_router.post(
+    "/{community_id}/activate", response_model=CommunityOut, operation_id="admin_activate_community"
 )
-def activate_society(society_id: UUID, session: DB):
-    record(session, Society, society_id, lock=True)
-    return catalog.set_society_status(session, society_id, "active")
+def activate_community(community_id: UUID, session: DB):
+    record(session, Community, community_id, lock=True)
+    return catalog.set_community_status(session, community_id, "active")
 
 
-@societies_router.post(
-    "/{society_id}/pause", response_model=SocietyOut, operation_id="admin_pause_society"
+@communities_router.post(
+    "/{community_id}/pause", response_model=CommunityOut, operation_id="admin_pause_community"
 )
-def pause_society(society_id: UUID, session: DB):
-    record(session, Society, society_id, lock=True)
-    return catalog.set_society_status(session, society_id, "paused")
+def pause_community(community_id: UUID, session: DB):
+    record(session, Community, community_id, lock=True)
+    return catalog.set_community_status(session, community_id, "paused")
 
 
-def tower_page(session, query, society_id):
-    statement = select(Tower)
-    if society_id:
-        record(session, Society, society_id)
-        statement = statement.where(Tower.society_id == society_id)
+def zone_page(session, query, community_id):
+    statement = select(CommunityZone)
+    if community_id:
+        record(session, Community, community_id)
+        statement = statement.where(CommunityZone.community_id == community_id)
     if query.q:
-        statement = statement.where(Tower.name.icontains(query.q, autoescape=True))
-    page = paginate(session, statement, query, {"created_at": Tower.created_at, "name": Tower.name})
-    page["items"] = [admin_people.tower_view(tower) for tower in page["items"]]
+        statement = statement.where(CommunityZone.name.icontains(query.q, autoescape=True))
+    page = paginate(
+        session,
+        statement,
+        query,
+        {"created_at": CommunityZone.created_at, "name": CommunityZone.name},
+    )
+    page["items"] = [admin_people.zone_view(zone) for zone in page["items"]]
     return page
 
 
-@societies_router.get(
-    "/{society_id}/towers", response_model=Page[TowerOut], operation_id="admin_list_society_towers"
+@communities_router.get(
+    "/{community_id}/zones",
+    response_model=Page[CommunityZoneOut],
+    operation_id="admin_list_community_zones",
 )
-def list_society_towers(society_id: UUID, session: DB, query: Listing):
-    return tower_page(session, query, society_id)
+def list_community_zones(community_id: UUID, session: DB, query: Listing):
+    return zone_page(session, query, community_id)
 
 
-@societies_router.post(
-    "/{society_id}/towers",
-    response_model=TowerOut,
+@communities_router.post(
+    "/{community_id}/zones",
+    response_model=CommunityZoneOut,
     status_code=201,
-    operation_id="admin_create_tower",
+    operation_id="admin_create_zone",
 )
-def create_tower(society_id: UUID, data: TowerCreate, session: DB):
-    record(session, Society, society_id, lock=True)
-    return catalog.add_tower(session, society_id, data)
+def create_zone(community_id: UUID, data: CommunityZoneCreate, session: DB):
+    record(session, Community, community_id, lock=True)
+    return catalog.add_zone(session, community_id, data)
 
 
-@towers_router.get("", response_model=Page[TowerOut], operation_id="admin_list_towers")
-def list_towers(session: DB, query: Listing, society_id: UUID | None = None):
-    return tower_page(session, query, society_id)
+@zones_router.get("", response_model=Page[CommunityZoneOut], operation_id="admin_list_zones")
+def list_zones(session: DB, query: Listing, community_id: UUID | None = None):
+    return zone_page(session, query, community_id)
 
 
-@towers_router.get("/{tower_id}", response_model=TowerOut, operation_id="admin_get_tower")
-def get_tower(tower_id: UUID, session: DB):
-    return admin_people.tower_view(record(session, Tower, tower_id))
+@zones_router.get("/{zone_id}", response_model=CommunityZoneOut, operation_id="admin_get_zone")
+def get_zone(zone_id: UUID, session: DB):
+    return admin_people.zone_view(record(session, CommunityZone, zone_id))
 
 
-@towers_router.patch("/{tower_id}", response_model=TowerOut, operation_id="admin_update_tower")
-def update_tower(tower_id: UUID, data: TowerUpdate, session: DB):
-    return admin_people.update_tower(session, tower_id, data)
+@zones_router.patch("/{zone_id}", response_model=CommunityZoneOut, operation_id="admin_update_zone")
+def update_zone(zone_id: UUID, data: CommunityZoneUpdate, session: DB):
+    return admin_people.update_zone(session, zone_id, data)
 
 
-@towers_router.delete(
-    "/{tower_id}", status_code=204, response_class=Response, operation_id="admin_delete_tower"
+@zones_router.delete(
+    "/{zone_id}", status_code=204, response_class=Response, operation_id="admin_delete_zone"
 )
-def delete_tower(tower_id: UUID, session: DB):
-    admin_people.delete_tower(session, tower_id)
+def delete_zone(zone_id: UUID, session: DB):
+    admin_people.delete_zone(session, zone_id)
     return Response(status_code=204)
 
 
@@ -162,19 +179,19 @@ def delete_tower(tower_id: UUID, session: DB):
 def list_memberships(
     session: DB,
     query: Listing,
-    society_id: UUID | None = None,
+    community_id: UUID | None = None,
     user_id: UUID | None = None,
     status: Literal["active", "suspended"] | None = None,
 ):
     statement = (
         select(Membership)
         .join(User, User.id == Membership.user_id)
-        .join(Society, Society.id == Membership.society_id)
-        .join(Tower, Tower.id == Membership.tower_id)
+        .join(Community, Community.id == Membership.community_id)
+        .outerjoin(CommunityZone, CommunityZone.id == Membership.zone_id)
     )
-    if society_id:
-        record(session, Society, society_id)
-        statement = statement.where(Membership.society_id == society_id)
+    if community_id:
+        record(session, Community, community_id)
+        statement = statement.where(Membership.community_id == community_id)
     if user_id:
         record(session, User, user_id)
         statement = statement.where(Membership.user_id == user_id)
@@ -185,16 +202,20 @@ def list_memberships(
             or_(
                 User.name.icontains(query.q, autoescape=True),
                 User.phone.icontains(query.q, autoescape=True),
-                Society.name.icontains(query.q, autoescape=True),
-                Tower.name.icontains(query.q, autoescape=True),
-                Membership.flat.icontains(query.q, autoescape=True),
+                Community.name.icontains(query.q, autoescape=True),
+                CommunityZone.name.icontains(query.q, autoescape=True),
+                Membership.address_label.icontains(query.q, autoescape=True),
             )
         )
     page = paginate(
         session,
         statement,
         query,
-        {"created_at": Membership.created_at, "flat": Membership.flat, "name": User.name},
+        {
+            "created_at": Membership.created_at,
+            "address_label": Membership.address_label,
+            "name": User.name,
+        },
     )
     page["items"] = [
         catalog.membership_view(session, member, admin=True) for member in page["items"]
@@ -255,5 +276,34 @@ def suspend_membership(membership_id: UUID, session: DB):
 
 
 router = APIRouter()
-for resource_router in (societies_router, towers_router, memberships_router):
+for resource_router in (communities_router, zones_router, memberships_router):
     router.include_router(resource_router)
+
+
+@router.get(
+    "/communities/{community_id}/pickup-points",
+    response_model=list[PickupPointOut],
+    dependencies=[Depends(require_admin)],
+)
+def community_pickup_points(community_id: UUID, session: DB):
+    record(session, Community, community_id)
+    return pickup_points.list_points(session, community_id, include_inactive=True)
+
+
+@router.post(
+    "/communities/{community_id}/pickup-points",
+    response_model=PickupPointOut,
+    status_code=201,
+    dependencies=[Depends(require_admin)],
+)
+def create_pickup_point(community_id: UUID, data: PickupPointCreate, session: DB):
+    return pickup_points.create_point(session, community_id, data)
+
+
+@router.patch(
+    "/pickup-points/{point_id}",
+    response_model=PickupPointOut,
+    dependencies=[Depends(require_admin)],
+)
+def edit_pickup_point(point_id: UUID, data: PickupPointUpdate, session: DB):
+    return pickup_points.update_point(session, point_id, data)

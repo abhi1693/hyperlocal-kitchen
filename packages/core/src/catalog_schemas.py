@@ -1,4 +1,4 @@
-"""Typed contracts for society onboarding, kitchens and dated food listings."""
+"""Typed contracts for community onboarding, kitchens and dated food listings."""
 
 from datetime import date, datetime
 from typing import Literal
@@ -27,61 +27,82 @@ class StrictRequest(BaseModel):
         return value
 
 
-class TowerCreate(StrictRequest):
+CommunityType = Literal[
+    "residential_society",
+    "cantonment",
+    "housing_colony",
+    "university",
+    "corporate_campus",
+    "gated_community",
+    "other",
+]
+ZoneType = Literal["tower", "area", "hostel", "block", "other"]
+
+
+class CommunityZoneCreate(StrictRequest):
     name: str = Field(min_length=1, max_length=100)
+    parent_zone_id: UUID | None = None
+    zone_type: ZoneType = "other"
+    active: bool = True
 
 
-class SocietyCreate(StrictRequest):
+class CommunityCreate(StrictRequest):
+    type: CommunityType = "residential_society"
     name: str = Field(min_length=1, max_length=200)
-    address: str = Field(min_length=1, max_length=500)
+    address: str | None = Field(default=None, min_length=1, max_length=500)
     city: str = Field(min_length=1, max_length=100)
-    postal_code: str = Field(min_length=1, max_length=20)
-    towers: list[TowerCreate] = Field(default_factory=list, max_length=100)
+    postal_code: str | None = Field(default=None, min_length=1, max_length=20)
+    zones: list[CommunityZoneCreate] = Field(default_factory=list, max_length=100)
 
 
-class SocietyUpdate(StrictRequest):
+class CommunityUpdate(StrictRequest):
+    type: CommunityType | None = None
     name: str | None = Field(default=None, min_length=1, max_length=200)
     address: str | None = Field(default=None, min_length=1, max_length=500)
     city: str | None = Field(default=None, min_length=1, max_length=100)
     postal_code: str | None = Field(default=None, min_length=1, max_length=20)
 
 
-class TowerOut(BaseModel):
+class CommunityZoneOut(BaseModel):
+    parent_zone_id: UUID | None = None
+    zone_type: ZoneType = "other"
+    active: bool = True
     id: UUID
-    society_id: UUID
+    community_id: UUID
     name: str
 
 
-class SocietyOut(BaseModel):
+class CommunityOut(BaseModel):
+    type: CommunityType
     id: UUID
     name: str
-    address: str
+    address: str | None
     city: str
-    postal_code: str
+    postal_code: str | None
     status: str
-    towers: list[TowerOut]
+    zones: list[CommunityZoneOut]
 
 
-class SocietyPage(BaseModel):
-    items: list[SocietyOut]
+class CommunityPage(BaseModel):
+    items: list[CommunityOut]
     total: int
     limit: int
     offset: int
 
 
 class MembershipJoin(StrictRequest):
-    tower_id: UUID
-    flat: str = Field(min_length=1, max_length=50)
+    zone_id: UUID | None = None
+    address_label: str | None = Field(default=None, min_length=1, max_length=250)
 
 
 class MembershipOut(BaseModel):
     id: UUID
-    society_id: UUID
+    community_id: UUID
     user_id: UUID
-    society_name: str
-    tower_id: UUID
-    tower_name: str
-    flat: str
+    community_name: str
+    zone_id: UUID | None = None
+    zone_name: str | None = None
+    address_label: str | None = None
     status: str
 
 
@@ -98,7 +119,9 @@ class MembershipPage(BaseModel):
 
 
 class KitchenCreate(StrictRequest):
-    society_id: UUID
+    zone_id: UUID | None = None
+    address_label: str | None = Field(default=None, min_length=1, max_length=250)
+    community_id: UUID
     name: str = Field(min_length=1, max_length=150)
     description: str | None = Field(default=None, max_length=1000)
     pickup_enabled: bool = True
@@ -117,6 +140,8 @@ class KitchenCreate(StrictRequest):
 
 
 class KitchenUpdate(StrictRequest):
+    zone_id: UUID | None = None
+    address_label: str | None = Field(default=None, min_length=1, max_length=250)
     name: str | None = Field(default=None, min_length=1, max_length=150)
     description: str | None = Field(default=None, max_length=1000)
     pickup_enabled: bool | None = None
@@ -134,10 +159,10 @@ class KitchenApprove(StrictRequest):
 
 class KitchenOut(BaseModel):
     id: UUID
-    society_id: UUID
+    community_id: UUID
     name: str
     description: str | None
-    tower_name: str
+    zone_name: str | None = None
     pickup_enabled: bool
     delivery_enabled: bool
     delivery_fee_paise: int
@@ -146,8 +171,8 @@ class KitchenOut(BaseModel):
 
 
 class KitchenOwnOut(KitchenOut):
-    tower_id: UUID
-    flat: str
+    zone_id: UUID | None = None
+    address_label: str | None = None
     upi_id: str | None
 
 
@@ -163,6 +188,34 @@ class KitchenAdminPage(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+class PickupPointCreate(StrictRequest):
+    name: str = Field(min_length=1, max_length=150)
+    zone_id: UUID | None = None
+    address_label: str = Field(min_length=1, max_length=250)
+    instructions: str | None = Field(default=None, max_length=1000)
+    active: bool = True
+
+
+class PickupPointUpdate(StrictRequest):
+    name: str | None = Field(default=None, min_length=1, max_length=150)
+    zone_id: UUID | None = None
+    address_label: str | None = Field(default=None, min_length=1, max_length=250)
+    instructions: str | None = Field(default=None, max_length=1000)
+    active: bool | None = None
+
+
+class PickupPointOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: UUID
+    community_id: UUID
+    kitchen_id: UUID | None
+    zone_id: UUID | None
+    name: str
+    address_label: str
+    instructions: str | None
+    active: bool
 
 
 class PhotoRequest(StrictRequest):
@@ -199,6 +252,7 @@ class DishOut(BaseModel):
 
 
 class ListingCreate(StrictRequest):
+    pickup_point_ids: list[UUID] = Field(default_factory=list, max_length=30)
     dish_id: UUID
     service_date: date
     available_from: AwareDatetime
@@ -212,6 +266,7 @@ class ListingCreate(StrictRequest):
 
 
 class ListingUpdate(StrictRequest):
+    pickup_point_ids: list[UUID] | None = Field(default=None, max_length=30)
     service_date: date | None = None
     available_from: AwareDatetime | None = None
     available_until: AwareDatetime | None = None
@@ -224,6 +279,7 @@ class ListingUpdate(StrictRequest):
 
 
 class ListingOut(BaseModel):
+    pickup_points: list[PickupPointOut]
     id: UUID
     kitchen: KitchenOut
     dish: DishOut

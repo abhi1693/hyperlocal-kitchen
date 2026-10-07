@@ -1,7 +1,7 @@
 [project]
 name = "hyperlocal-kitchen"
 version = "0.1.0"
-description = "Society-scoped home kitchen marketplace backend"
+description = "Private hyperlocal food marketplace for communities"
 requires-python = ">=3.12"
 dependencies = []
 

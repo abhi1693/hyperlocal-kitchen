@@ -39,12 +39,12 @@ router = APIRouter(tags=["food administration"], dependencies=[Depends(require_a
 def kitchens(
     session: DB,
     listing: Listing,
-    society_id: UUID | None = None,
+    community_id: UUID | None = None,
     status: Literal["pending", "approved", "suspended"] | None = None,
 ):
     statement = select(Kitchen)
-    if society_id is not None:
-        statement = statement.where(Kitchen.society_id == society_id)
+    if community_id is not None:
+        statement = statement.where(Kitchen.community_id == community_id)
     if status is not None:
         statement = statement.where(Kitchen.status == status)
     if listing.q:
@@ -165,12 +165,12 @@ def delete_member(kitchen_id: UUID, user_id: UUID, session: DB):
     return Response(status_code=204)
 
 
-def _dishes(session, listing, *, kitchen_id=None, society_id=None, is_active=None):
+def _dishes(session, listing, *, kitchen_id=None, community_id=None, is_active=None):
     statement = select(Dish).join(Kitchen)
     if kitchen_id is not None:
         statement = statement.where(Dish.kitchen_id == kitchen_id)
-    if society_id is not None:
-        statement = statement.where(Kitchen.society_id == society_id)
+    if community_id is not None:
+        statement = statement.where(Kitchen.community_id == community_id)
     if is_active is not None:
         statement = statement.where(Dish.is_active.is_(is_active))
     if listing.q:
@@ -194,11 +194,11 @@ def dishes(
     session: DB,
     listing: Listing,
     kitchen_id: UUID | None = None,
-    society_id: UUID | None = None,
+    community_id: UUID | None = None,
     is_active: bool | None = None,
 ):
     return _dishes(
-        session, listing, kitchen_id=kitchen_id, society_id=society_id, is_active=is_active
+        session, listing, kitchen_id=kitchen_id, community_id=community_id, is_active=is_active
     )
 
 
@@ -258,7 +258,7 @@ def _listings(
     listing,
     *,
     kitchen_id=None,
-    society_id=None,
+    community_id=None,
     dish_id=None,
     service_date=None,
     date_from=None,
@@ -274,7 +274,7 @@ def _listings(
     )
     for column, value in (
         (MenuListing.kitchen_id, kitchen_id),
-        (Kitchen.society_id, society_id),
+        (Kitchen.community_id, community_id),
         (MenuListing.dish_id, dish_id),
         (MenuListing.service_date, service_date),
     ):
@@ -313,7 +313,7 @@ def listings(
     session: DB,
     listing: Listing,
     kitchen_id: UUID | None = None,
-    society_id: UUID | None = None,
+    community_id: UUID | None = None,
     dish_id: UUID | None = None,
     service_date: date | None = None,
     date_from: date | None = None,
@@ -324,7 +324,7 @@ def listings(
         session,
         listing,
         kitchen_id=kitchen_id,
-        society_id=society_id,
+        community_id=community_id,
         dish_id=dish_id,
         service_date=service_date,
         date_from=date_from,

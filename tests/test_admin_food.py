@@ -10,12 +10,13 @@ from kitchen_core import catalog
 from kitchen_core.catalog_schemas import KitchenCreate, MembershipJoin
 from kitchen_core.errors import DomainError
 from kitchen_core.models import (
+    Community,
+    CommunityZone,
     Dish,
     Kitchen,
     KitchenMember,
     Membership,
-    Society,
-    Tower,
+    PickupPoint,
     User,
 )
 from kitchen_http.auth import require_admin, require_user
@@ -24,9 +25,11 @@ from sqlalchemy import select
 
 @pytest.fixture
 def food_market(session):
-    societies = [
-        Society(name=name, address="Pilot Road", city="Pune", postal_code="411001", status="active")
-        for name in ("Garden Society", "Other Society")
+    communities = [
+        Community(
+            name=name, address="Pilot Road", city="Pune", postal_code="411001", status="active"
+        )
+        for name in ("Garden Community", "Other Community")
     ]
     users = [
         User(
@@ -37,56 +40,65 @@ def food_market(session):
         )
         for name in ("owner", "resident", "outsider", "inactive")
     ]
-    session.add_all(societies + users)
+    session.add_all(communities + users)
     session.flush()
-    society, other = societies
+    community, other = communities
     owner, resident, outsider, inactive = users
-    towers = [
-        Tower(society_id=society.id, name="Tower B"),
-        Tower(society_id=society.id, name="Tower C"),
-        Tower(society_id=other.id, name="Tower Z"),
+    zones = [
+        CommunityZone(community_id=community.id, name="Zone B"),
+        CommunityZone(community_id=community.id, name="Zone C"),
+        CommunityZone(community_id=other.id, name="Zone Z"),
     ]
-    session.add_all(towers)
+    session.add_all(zones)
     session.flush()
-    tower, second_tower, other_tower = towers
+    zone, second_zone, other_zone = zones
     for user in (owner, resident, inactive):
         session.add(
             Membership(
-                society_id=society.id,
+                community_id=community.id,
                 user_id=user.id,
-                tower_id=tower.id,
-                flat="B-101",
+                zone_id=zone.id,
+                address_label="B-101",
                 status="active",
             )
         )
     session.add(
         Membership(
-            society_id=other.id,
+            community_id=other.id,
             user_id=outsider.id,
-            tower_id=other_tower.id,
-            flat="Z-101",
+            zone_id=other_zone.id,
+            address_label="Z-101",
             status="active",
         )
     )
     kitchen = Kitchen(
-        society_id=society.id,
+        community_id=community.id,
         name="Manisha's Kitchen",
-        tower_id=tower.id,
-        flat="B-101",
+        zone_id=zone.id,
+        address_label="B-101",
         status="approved",
         fssai_number="12345678901234",
         pickup_enabled=True,
         delivery_enabled=False,
     )
     other_kitchen = Kitchen(
-        society_id=other.id,
+        community_id=other.id,
         name="Other Kitchen",
-        tower_id=other_tower.id,
-        flat="Z-101",
+        zone_id=other_zone.id,
+        address_label="Z-101",
         status="pending",
     )
     session.add_all([kitchen, other_kitchen])
     session.flush()
+    session.add(
+        PickupPoint(
+            community_id=community.id,
+            kitchen_id=kitchen.id,
+            zone_id=zone.id,
+            name=kitchen.name,
+            address_label=kitchen.address_label,
+        )
+    )
     session.add_all(
         [
             KitchenMember(kitchen_id=kitchen.id, user_id=owner.id, role="owner"),
@@ -97,11 +109,11 @@ def food_market(session):
     session.add(dish)
     session.commit()
     return dict(
-        society=society,
+        community=community,
         other=other,
-        tower=tower,
-        second_tower=second_tower,
-        other_tower=other_tower,
+        zone=zone,
+        second_zone=second_zone,
+        other_zone=other_zone,
         owner=owner,
         resident=resident,
         outsider=outsider,
@@ -136,7 +148,7 @@ def admin_publish(admin_client, market, **changes):
     return response.json()
 
 
-def test_admin_creates_for_real_resident_and_corrects_same_society_address(
+def test_admin_creates_for_real_resident_and_corrects_same_community_address(
     admin_client, session, food_market
 ):
     market = food_market
@@ -144,32 +156,31 @@ def test_admin_creates_for_real_resident_and_corrects_same_society_address(
         "/api/v1/kitchens",
         json={
             "owner_user_id": str(market["resident"].id),
-            "society_id": str(market["society"].id),
+            "community_id": str(market["community"].id),
             "name": "Resident's Kitchen",
         },
     )
     assert response.status_code == 201, response.text
     kitchen = response.json()
     assert kitchen["status"] == "pending"
-    assert kitchen["tower_id"] == str(market["tower"].id)
-    assert kitchen["flat"] == "B-101"
+    assert kitchen["zone_id"] == str(market["zone"].id)
+    assert kitchen["address_label"] == "B-101"
     member = session.get(KitchenMember, (UUID(kitchen["id"]), market["resident"].id))
     assert member is not None and member.role == "owner"
     path = f"/api/v1/kitchens/{kitchen['id']}"
     assert (
-        admin_client.patch(path, json={"tower_id": str(market["other_tower"].id)}).status_code
-        == 422
+        admin_client.patch(path, json={"zone_id": str(market["other_zone"].id)}).status_code == 422
     )
     corrected = admin_client.patch(
         path,
         json={
-            "tower_id": str(market["second_tower"].id),
-            "flat": "C-204",
+            "zone_id": str(market["second_zone"].id),
+            "address_label": "C-204",
         },
     )
     assert corrected.status_code == 200, corrected.text
-    assert corrected.json()["tower_name"] == "Tower C"
-    assert corrected.json()["flat"] == "C-204"
+    assert corrected.json()["zone_name"] == "Zone C"
+    assert corrected.json()["address_label"] == "C-204"
     assert admin_client.patch(path, json={"status": "approved"}).status_code == 422
     assert (
         admin_client.post(path + "/approve", json={"fssai_number": "12345678901234"}).status_code
@@ -184,14 +195,16 @@ def test_admin_creates_for_real_resident_and_corrects_same_society_address(
         "/api/v1/kitchens",
         json={
             "owner_user_id": str(market["inactive"].id),
-            "society_id": str(market["society"].id),
+            "community_id": str(market["community"].id),
             "name": "Inactive Kitchen",
         },
     )
     assert rejected.status_code == 403
 
 
-def test_admin_members_cannot_cross_society_or_remove_last_active_owner(admin_client, food_market):
+def test_admin_members_cannot_cross_community_or_remove_last_active_owner(
+    admin_client, food_market
+):
     market = food_market
     path = f"/api/v1/kitchens/{market['kitchen'].id}/members"
     for name in ("outsider", "inactive"):
@@ -211,16 +224,16 @@ def test_admin_members_cannot_cross_society_or_remove_last_active_owner(admin_cl
     assert page["total"] == 1 and page["items"][0]["user_name"] == "resident"
 
 
-def test_admin_lists_across_societies_and_archives_and_restores_reusable_dishes(
+def test_admin_lists_across_communities_and_archives_and_restores_reusable_dishes(
     admin_client, client, food_market
 ):
     market = food_market
     kitchens = admin_client.get("/api/v1/kitchens", params={"sort": "name"}).json()
     assert kitchens["total"] == 2
     assert (
-        admin_client.get("/api/v1/kitchens", params={"society_id": str(market["other"].id)}).json()[
-            "total"
-        ]
+        admin_client.get(
+            "/api/v1/kitchens", params={"community_id": str(market["other"].id)}
+        ).json()["total"]
         == 1
     )
     response = admin_client.post(
@@ -239,7 +252,7 @@ def test_admin_lists_across_societies_and_archives_and_restores_reusable_dishes(
     assert admin_client.patch(path, json={"name": "Chole and Rice"}).status_code == 200
     assert admin_client.post(path + "/restore").json()["is_active"] is True
     assert (
-        admin_client.get("/api/v1/dishes", params={"society_id": str(market["other"].id)}).json()[
+        admin_client.get("/api/v1/dishes", params={"community_id": str(market["other"].id)}).json()[
             "total"
         ]
         == 1
@@ -269,7 +282,7 @@ def test_admin_listing_mutations_preserve_reserved_price_window_and_live_orders(
     listing_page = admin_client.get(
         "/api/v1/menu-listings",
         params={
-            "society_id": str(market["society"].id),
+            "community_id": str(market["community"].id),
             "q": "Rajma",
         },
     ).json()
@@ -298,11 +311,11 @@ def test_admin_listing_mutations_preserve_reserved_price_window_and_live_orders(
     assert changed.status_code == 200
     assert changed.json()["quantity_remaining"] == 8
     corrected = admin_client.patch(
-        f"/api/v1/kitchens/{market['kitchen'].id}", json={"flat": "B-999"}
+        f"/api/v1/kitchens/{market['kitchen'].id}", json={"address_label": "B-999"}
     )
     assert corrected.status_code == 200
     order = client.get(f"/api/v1/orders/{placed.json()['id']}").json()
-    assert order["pickup_address"]["flat"] == "B-101"
+    assert order["pickup_address"]["address_label"] == "B-101"
     assert order["total_paise"] == 30000
     cancelled = client.post(f"/api/v1/orders/{placed.json()['id']}/cancel")
     assert cancelled.status_code == 200, cancelled.text
@@ -313,7 +326,7 @@ def test_admin_listing_mutations_preserve_reserved_price_window_and_live_orders(
     assert session.scalar(select(Dish.id).where(Dish.id == market["dish"].id)) is not None
 
 
-def test_admin_still_requires_approved_kitchen_active_society_and_own_dish(
+def test_admin_still_requires_approved_kitchen_active_community_and_own_dish(
     admin_client, client, session, food_market
 ):
     market = food_market
@@ -339,7 +352,7 @@ def test_admin_still_requires_approved_kitchen_active_society_and_own_dish(
     assert admin_client.patch(publish_path, json={"status": "published"}).status_code == 422
     assert admin_client.post(dish_path + "/restore").status_code == 200
     assert admin_client.patch(publish_path, json={"status": "published"}).status_code == 200
-    market["society"].status = "paused"
+    market["community"].status = "paused"
     session.commit()
     assert admin_client.post(path, json=data).status_code == 409
     draft = admin_publish(admin_client, market, status="draft")
@@ -349,7 +362,7 @@ def test_admin_still_requires_approved_kitchen_active_society_and_own_dish(
         ).status_code
         == 409
     )
-    market["society"].status = "active"
+    market["community"].status = "active"
     session.commit()
     assert admin_client.post(f"/api/v1/kitchens/{market['kitchen'].id}/suspend").status_code == 200
     assert admin_client.post(path, json=data).status_code == 409
@@ -381,23 +394,23 @@ def test_waiting_resident_mutation_rechecks_deactivated_user(
             request_session.scalar(
                 select(Membership).where(
                     Membership.user_id == user.id,
-                    Membership.society_id == market["society"].id,
+                    Membership.community_id == market["community"].id,
                 )
             )
             started.set()
             try:
                 if operation == "join":
-                    catalog.join_society(
+                    catalog.join_community(
                         request_session,
                         user,
-                        market["society"].id,
-                        MembershipJoin(tower_id=market["tower"].id, flat="B-101"),
+                        market["community"].id,
+                        MembershipJoin(zone_id=market["zone"].id, address_label="B-101"),
                     )
                 else:
                     catalog.create_kitchen(
                         request_session,
                         user,
-                        KitchenCreate(society_id=market["society"].id, name="Waiting Kitchen"),
+                        KitchenCreate(community_id=market["community"].id, name="Waiting Kitchen"),
                     )
                 request_session.commit()
                 return None
@@ -417,7 +430,7 @@ def test_waiting_resident_mutation_rechecks_deactivated_user(
             membership = administrator.scalar(
                 select(Membership).where(
                     Membership.user_id == user.id,
-                    Membership.society_id == market["society"].id,
+                    Membership.community_id == market["community"].id,
                 )
             )
             membership.status = "suspended"
@@ -467,7 +480,7 @@ def test_listing_cancellation_available_after_pause_suspend_or_fulfillment_chang
     assert admin_client.get(listing_path).json()["is_orderable"] is False
     assert client.get(listing_path).json()["is_orderable"] is False
     assert admin_client.post(path + "/suspend").status_code == 200
-    market["society"].status = "paused"
+    market["community"].status = "paused"
     session.commit()
     client.app.dependency_overrides[require_user] = lambda: market["owner"]
     committed_path = f"/api/v1/menu-listings/{committed_listing['id']}"

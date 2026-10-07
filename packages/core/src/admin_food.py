@@ -10,16 +10,17 @@ from kitchen_core.admin_food_schemas import (
     KitchenMemberOut,
     KitchenMemberUpdate,
 )
-from kitchen_core.catalog_schemas import DishOut, KitchenCreate, KitchenOwnOut, KitchenUpdate
+from kitchen_core.catalog_schemas import DishOut, KitchenCreate, KitchenOwnOut
 from kitchen_core.errors import DomainError
 from kitchen_core.models import (
     Dish,
     Kitchen,
     KitchenMember,
+    ListingPickupPoint,
     Membership,
     MenuListing,
     Order,
-    Tower,
+    PickupPoint,
     User,
 )
 from sqlalchemy import delete, select
@@ -40,30 +41,15 @@ def _lock(session: Session, model, identifier: UUID):
 
 def create_kitchen(session: Session, data: AdminKitchenCreate) -> KitchenOwnOut:
     owner = _lock(session, User, data.owner_user_id)
-    details = KitchenCreate.model_validate(data.model_dump(exclude={"owner_user_id"}))
+    details = KitchenCreate.model_validate(
+        data.model_dump(exclude={"owner_user_id"}, exclude_unset=True)
+    )
     return catalog.create_kitchen(session, owner, details)
 
 
 def update_kitchen(session: Session, kitchen_id: UUID, data: AdminKitchenUpdate) -> KitchenOwnOut:
-    kitchen = _lock(session, Kitchen, kitchen_id)
-    values = data.model_dump(exclude_unset=True)
-    if "tower_id" in values:
-        if values["tower_id"] is None:
-            raise DomainError(422, "required_field", "tower_id cannot be empty.")
-        tower = catalog._get(session, Tower, values["tower_id"])
-        if tower.society_id != kitchen.society_id:
-            raise DomainError(422, "tower_society_mismatch", "Choose a tower in this society.")
-    if "flat" in values and values["flat"] is None:
-        raise DomainError(422, "required_field", "flat cannot be empty.")
-    details = KitchenUpdate.model_validate(
-        {field: value for field, value in values.items() if field not in {"tower_id", "flat"}}
-    )
-    catalog.update_kitchen(session, None, kitchen_id, details, admin=True)
-    for field in ("tower_id", "flat"):
-        if field in values:
-            setattr(kitchen, field, values[field])
-    session.flush()
-    return catalog.kitchen_view(session, kitchen, private=True)
+    _lock(session, Kitchen, kitchen_id)
+    return catalog.update_kitchen(session, None, kitchen_id, data, admin=True)
 
 
 def delete_kitchen(session: Session, kitchen_id: UUID):
@@ -73,6 +59,25 @@ def delete_kitchen(session: Session, kitchen_id: UUID):
             raise DomainError(
                 409, "record_in_use", "A kitchen with food or order history cannot be deleted."
             )
+    owned_points = list(
+        session.scalars(
+            select(PickupPoint)
+            .where(PickupPoint.kitchen_id == kitchen_id)
+            .order_by(PickupPoint.id)
+            .with_for_update()
+        )
+    )
+    for point in owned_points:
+        if session.scalar(
+            select(ListingPickupPoint.listing_id)
+            .where(ListingPickupPoint.pickup_point_id == point.id)
+            .limit(1)
+        ) or session.scalar(select(Order.id).where(Order.pickup_point_id == point.id).limit(1)):
+            raise DomainError(
+                409, "record_in_use", "A referenced pickup point prevents deleting this kitchen."
+            )
+        session.delete(point)
+    session.flush()
     session.execute(delete(KitchenMember).where(KitchenMember.kitchen_id == kitchen_id))
     session.delete(kitchen)
     session.flush()
@@ -92,7 +97,7 @@ def _require_remaining_owner(session: Session, kitchen: Kitchen, excluding: UUID
         .join(
             Membership,
             (Membership.user_id == KitchenMember.user_id)
-            & (Membership.society_id == kitchen.society_id),
+            & (Membership.community_id == kitchen.community_id),
         )
         .where(
             KitchenMember.kitchen_id == kitchen.id,
@@ -105,7 +110,9 @@ def _require_remaining_owner(session: Session, kitchen: Kitchen, excluding: UUID
     )
     if owner is None:
         raise DomainError(
-            409, "active_owner_required", "The kitchen must retain an active resident owner."
+            409,
+            "active_owner_required",
+            "The kitchen must retain an active community member as owner.",
         )
 
 
@@ -115,7 +122,7 @@ def create_member(
     # Use the same user-before-kitchen order as account deactivation and kitchen creation.
     _lock(session, User, data.user_id)
     kitchen = _lock(session, Kitchen, kitchen_id)
-    catalog.require_membership(session, data.user_id, kitchen.society_id)
+    catalog.require_membership(session, data.user_id, kitchen.community_id)
     if session.get(KitchenMember, (kitchen_id, data.user_id)) is not None:
         raise DomainError(409, "member_exists", "This user already manages the kitchen.")
     if data.role != "owner":
@@ -131,7 +138,7 @@ def update_member(
 ) -> KitchenMemberOut:
     _lock(session, User, user_id)
     kitchen = _lock(session, Kitchen, kitchen_id)
-    catalog.require_membership(session, user_id, kitchen.society_id)
+    catalog.require_membership(session, user_id, kitchen.community_id)
     member = session.get(KitchenMember, (kitchen_id, user_id))
     if member is None:
         raise DomainError(404, "not_found", "Kitchen member was not found.")

@@ -52,32 +52,32 @@ def pilot(client, admin_client, session_factory):
         session.flush()
         owner = {"Authorization": f"Bearer {cook.id}"}
         resident = {"Authorization": f"Bearer {customer.id}"}
-    society = successful(
+    community = successful(
         admin_client.post(
-            "/api/v1/societies",
+            "/api/v1/communities",
             json={
                 "name": "Pilot Gardens",
                 "address": "123 Pilot Road",
                 "city": "Gurugram",
                 "postal_code": "122001",
-                "towers": [{"name": "Tower A"}, {"name": "Tower B"}],
+                "zones": [{"name": "Zone A"}, {"name": "Zone B"}],
             },
         ),
         201,
     )
-    sid = society["id"]
-    successful(admin_client.post(f"/api/v1/societies/{sid}/activate"))
-    for headers, tower, flat in (
+    sid = community["id"]
+    successful(admin_client.post(f"/api/v1/communities/{sid}/activate"))
+    for headers, zone, address_label in (
         (owner, 0, "101"),
         (resident, 1, "202"),
     ):
         membership = successful(
             client.post(
-                f"/api/v1/societies/{sid}/join",
+                f"/api/v1/communities/{sid}/join",
                 headers=headers,
                 json={
-                    "tower_id": society["towers"][tower]["id"],
-                    "flat": flat,
+                    "zone_id": community["zones"][zone]["id"],
+                    "address_label": address_label,
                 },
             ),
             201,
@@ -88,7 +88,7 @@ def pilot(client, admin_client, session_factory):
             "/api/v1/kitchens",
             headers=owner,
             json={
-                "society_id": sid,
+                "community_id": sid,
                 "name": "Pilot Kitchen",
                 "upi_id": "pilot@bank",
                 "delivery_enabled": True,
@@ -126,20 +126,20 @@ def pilot(client, admin_client, session_factory):
         ),
         201,
     )
-    return owner, resident, society, kitchen, listing
+    return owner, resident, community, kitchen, listing
 
 
 def test_complete_http_order_loop_and_notification_privacy(client, admin_client, pilot):
-    owner, resident, society, kitchen, listing = pilot
+    owner, resident, community, kitchen, listing = pilot
     menu = successful(
         client.get(
-            f"/api/v1/societies/{society['id']}/menu",
+            f"/api/v1/communities/{community['id']}/menu",
             params={"date": listing["service_date"]},
             headers=resident,
         )
     )
     assert menu["items"][0]["quantity_remaining"] == 3
-    assert "flat" not in menu["items"][0]["kitchen"]
+    assert "address_label" not in menu["items"][0]["kitchen"]
     body = {
         "items": [{"menu_listing_id": listing["id"], "quantity": 2}],
         "fulfillment_type": "delivery",
@@ -148,8 +148,9 @@ def test_complete_http_order_loop_and_notification_privacy(client, admin_client,
     order = successful(client.post("/api/v1/orders", json=body, headers=headers), 201)
     assert order["status"] == "pending"
     assert order["total_paise"] == 32000
-    assert order["delivery_address"]["flat"] == "202"
-    assert order["pickup_address"]["address"] == "123 Pilot Road"
+    assert order["delivery_address"]["address_label"] == "202"
+    assert order["pickup_address"] is None
+    assert order["fulfillment_snapshot"]["address"] == "123 Pilot Road"
     assert order["upi_id"] is None
     retry = client.post("/api/v1/orders", json=body, headers=headers)
     assert retry.status_code in (200, 201)
@@ -178,7 +179,7 @@ def test_complete_http_order_loop_and_notification_privacy(client, admin_client,
     )
     inbox = successful(client.get("/api/v1/notifications", headers=resident))["items"]
     assert len(inbox) >= 4
-    assert "flat" not in str(inbox)
+    assert "address_label" not in str(inbox)
     assert "phone" not in str(inbox)
     note = successful(client.post(f"/api/v1/notifications/{inbox[0]['id']}/read", headers=resident))
     assert note["read_at"] is not None
@@ -189,7 +190,7 @@ def test_complete_http_order_loop_and_notification_privacy(client, admin_client,
 
 
 def test_customer_cancellation_releases_inventory_once(client, pilot, session):
-    owner, resident, society, kitchen, listing = pilot
+    owner, resident, community, kitchen, listing = pilot
     order = successful(
         client.post(
             "/api/v1/orders",
@@ -205,10 +206,10 @@ def test_customer_cancellation_releases_inventory_once(client, pilot, session):
 
 
 def test_platform_admin_writes_do_not_exist_in_resident_api(client):
-    assert client.post("/api/v1/societies", json={"name": "Unauthorised"}).status_code == 405
+    assert client.post("/api/v1/communities", json={"name": "Unauthorised"}).status_code == 405
     assert (
         client.post(
-            "/api/v1/societies/00000000-0000-0000-0000-000000000001/towers",
+            "/api/v1/communities/00000000-0000-0000-0000-000000000001/zones",
             json={"name": "Unauthorised"},
         ).status_code
         == 405

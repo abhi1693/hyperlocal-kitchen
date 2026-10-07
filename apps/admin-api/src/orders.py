@@ -1,5 +1,6 @@
 """Platform order administration using the shared inventory and state machine."""
 
+from datetime import date
 from typing import Annotated
 from uuid import UUID
 
@@ -9,7 +10,13 @@ from kitchen_admin_api.pagination import Listing, Page, paginate, record
 from kitchen_core import orders as service
 from kitchen_core.admin_order_schemas import AdminOrderCreate, OrderStatus
 from kitchen_core.models import Kitchen, Order, User
-from kitchen_core.order_schemas import OrderCreate, OrderOut, OrderReject, PaymentStatus
+from kitchen_core.order_schemas import (
+    FulfillmentGroup,
+    OrderCreate,
+    OrderOut,
+    OrderReject,
+    PaymentStatus,
+)
 from kitchen_http.auth import require_admin
 from sqlalchemy import String, cast, or_, select
 
@@ -22,7 +29,7 @@ def list_orders(
     query: Listing,
     customer_id: UUID | None = None,
     kitchen_id: UUID | None = None,
-    society_id: UUID | None = None,
+    community_id: UUID | None = None,
     status: OrderStatus | None = None,
     payment_status: PaymentStatus | None = None,
 ):
@@ -43,7 +50,7 @@ def list_orders(
     for column, value in (
         (Order.customer_id, customer_id),
         (Order.kitchen_id, kitchen_id),
-        (Order.society_id, society_id),
+        (Order.community_id, community_id),
         (Order.status, status),
         (Order.payment_status, payment_status),
     ):
@@ -141,3 +148,12 @@ def report_payment(order_id: UUID, session: DB, admin: Admin):
 )
 def confirm_payment(order_id: UUID, session: DB, admin: Admin):
     return service.record_payment(session, None, order_id, "confirm", admin=True)
+
+
+@router.get(
+    "/kitchens/{kitchen_id}/fulfillment-groups",
+    response_model=list[FulfillmentGroup],
+    operation_id="admin_kitchen_fulfillment_groups",
+)
+def kitchen_fulfillment_groups(kitchen_id: UUID, service_date: date, session: DB):
+    return service.fulfillment_groups(session, None, kitchen_id, service_date, admin=True)

@@ -1,20 +1,20 @@
 # Hyperlocal Kitchen
 
-FastAPI backend for a society-scoped home-kitchen marketplace. Residents and
-kitchen owners share one account and one mobile API. Platform administration has
+FastAPI backend for a private hyperlocal food marketplace for communities.
+Members and kitchen owners share one account and one mobile API. Platform administration has
 a separate API and Zitadel application. The admin web app and mobile UI come next.
 
 ## MVP
 
-- Platform admins manage users, societies, towers, memberships, kitchens, dishes,
-  dated listings and orders across societies. They approve kitchens and manage
+- Platform admins manage users, communities, zones, memberships, kitchens, dishes,
+  dated listings and orders across communities. They approve kitchens and manage
   who can operate a kitchen.
-- Residents select a society, tower and their own flat. Joining activates their
-  membership immediately, with no invitation or admin approval.
+- Members select a community and optionally provide a home zone and address label.
+  Joining activates membership immediately, with no invitation or membership approval.
 - Kitchen owners create reusable dishes and publish dated listings with price,
   portions, cutoff and pickup/delivery windows. Future listings supply the weekly
   menu; cooking again reuses the same dish.
-- Residents discover food only within an active society membership and place
+- Members discover food only within an active community membership and place
   orders from one kitchen and one service window at a time.
 - Kitchens accept/reject orders, then mark preparing, ready and completed.
   Customers can cancel before preparation. Unaccepted orders expire after
@@ -26,11 +26,16 @@ a separate API and Zitadel application. The admin web app and mobile UI come nex
 - Orders produce an in-app inbox. An optional Expo push adapter is disabled by
   default. Registered devices are bound to their signed-in session.
 
-Societies have no timezone or access-instructions fields. Menu dates use India
+Community types are `residential_society`, `cantonment`, `housing_colony`,
+`university`, `corporate_campus`, `gated_community` and `other`. Zones can form a
+hierarchy and use `tower`, `area`, `hostel`, `block` or `other` as their type.
+Communities can activate without zones; home zones and addresses are optional.
+
+Communities have no timezone or access-instructions fields. Menu dates use India
 time internally. Dishes contain only their name, optional description and photo
 URL, kitchen relationship and active flag. Orders link to the customer user;
-their name is read from that user. Item names/prices and fulfillment addresses
-are snapshotted so existing orders keep their agreed details. Kitchen names are
+their name is read from that user. Item names/prices and the selected fulfillment
+destination are snapshotted so existing orders keep their agreed details. Kitchen names are
 also read from the linked kitchen. The order timeline is the single source for
 status timestamps and rejection reasons. Delivery fees belong to the kitchen;
 listings show that fee and orders snapshot it at checkout.
@@ -42,7 +47,7 @@ provided; uploading photos to object storage is not implemented yet.
 ## Structure
 
 ```text
-apps/api/src/          Resident and kitchen-owner FastAPI application
+apps/api/src/          Member and kitchen-owner FastAPI application
 apps/admin-api/src/    Platform-admin FastAPI application
 apps/worker/src/       Pending-order expiry and optional push dispatch
 packages/core/src/    Models, contracts, business logic and Zitadel sessions
@@ -58,9 +63,11 @@ The Python 3.12+ uv workspace follows DevFeed's service/shared-package layout.
 
 | Connection | Cardinality | Model/link |
 | --- | --- | --- |
-| User ↔ Society | Many-to-many | Membership, with tower, flat and membership status |
+| User ↔ Community | Many-to-many | Membership, with optional zone, address label and membership status |
 | User ↔ Kitchen | Many-to-many | KitchenMember, with owner/manager role |
-| Society → Tower / Kitchen | One-to-many | Society foreign keys |
+| Community → CommunityZone / Kitchen / PickupPoint | One-to-many | Community foreign keys |
+| CommunityZone → CommunityZone | One-to-many | Optional parent in the same community |
+| MenuListing ↔ PickupPoint | Many-to-many | ListingPickupPoint, constrained to the kitchen community |
 | Kitchen → Dish → MenuListing | One-to-many at each step | Reusable dish, dated availability |
 | User / Kitchen → Order | One-to-many | Customer and kitchen foreign keys |
 | Order ↔ MenuListing | Many-to-many | OrderItem, with quantity and agreed name/price |
@@ -68,12 +75,13 @@ The Python 3.12+ uv workspace follows DevFeed's service/shared-package layout.
 | Order → OrderIdempotency | One-to-one, optional | Checkout retry key |
 | User → Device | One-to-many | Push device, bound to its Redis session |
 
-ORM relationships are bidirectional with `back_populates`. Association objects
-are the writable path; direct user/society/kitchen collections are read-only.
+The existing user, kitchen and commerce ORM relationships are bidirectional
+with `back_populates`; pickup-point links use explicit foreign keys. Association objects
+are the writable path; direct user/community/kitchen collections are read-only.
 UUID primary keys and unique association keys prevent duplicate links.
-Composite foreign keys enforce that towers belong to the selected society,
+Composite foreign keys enforce that zones belong to the selected community,
 dishes belong to their listing's kitchen, orders belong to their kitchen's
-society, and retry keys belong to the order's customer. Historical records
+community, and retry keys belong to the order's customer. Historical records
 restrict hard deletion; the API uses suspension, cancellation and archiving.
 These fixed entities use typed foreign keys, with no generic relation required.
 The association-object pattern follows the [SQLAlchemy relationship documentation](https://docs.sqlalchemy.org/en/20/orm/basic_relationships.html#association-object).
@@ -87,7 +95,7 @@ docker compose up --build --watch
 
 Docker Compose starts PostgreSQL, Redis, migrations, both APIs and the worker.
 The project's local `.env` is configured for admin development. It selects
-`compose.yaml` and `compose.build.yaml` through `COMPOSE_FILE`. Resident API docs:
+`compose.yaml` and `compose.build.yaml` through `COMPOSE_FILE`. Member API docs:
 `http://localhost:18000/docs`. Platform-admin API docs:
 `http://localhost:3001/docs`. `/health` reports process health; `/ready` checks
 the database migration. Blank Zitadel settings leave authentication disabled;
@@ -204,16 +212,19 @@ API keys are implemented. A real provider login still needs your client settings
 
 | Client | Prefix | Main resources/actions |
 | --- | --- | --- |
-| Platform admin | `/api/v1` on the admin API | Users, societies, towers, memberships, kitchens and members, dishes, listings, orders |
-| Resident | `/api/v1` | Society/tower selection, joining, today's menu, kitchens, orders, profile |
+| Platform admin | `/api/v1` on the admin API | Users, communities, zones, memberships, kitchens and members, dishes, listings, orders |
+| Member | `/api/v1` | Community/zone selection, joining, today's menu, kitchens, orders, profile |
 | Kitchen owner | `/api/v1` | Dishes, menu listings, own kitchen orders and status actions |
 
-Admin-created societies start as drafts; add at least one tower and activate.
-Resident onboarding is `POST /api/v1/societies/{id}/join` with `tower_id` and
-`flat`. A valid address returns an active membership immediately. The tower must
-belong to the selected society. Explicitly suspended memberships can only be
+Admin-created communities start as drafts and can activate with no zones.
+Onboarding is `POST /api/v1/communities/{id}/join` with optional `zone_id` and
+`address_label`; an empty object is valid. A supplied zone must be active and
+belong to the selected community. Joining returns an active membership immediately.
+Explicitly suspended memberships can only be
 restored by an admin through `/api/v1/memberships/{id}/activate`.
-Kitchen setup uses the owner's active membership address. Kitchen approval
+Kitchen setup accepts an independent `zone_id` and `address_label`. Omitted location
+fields initially use the owner's membership address; explicit nulls clear that
+default. Subsequent home-address edits do not move the kitchen. Kitchen approval
 requires a 14-digit FSSAI registration/license number; this stores the supplied
 number and does not verify it against a registry.
 
@@ -234,15 +245,97 @@ profile and account activation, without manufacturing local login identities.
 Deactivation suspends the user's memberships and disables their push devices;
 kitchens are suspended when they lose their last active resident owner.
 
-Use `GET /api/v1/societies/{id}/menu?date=2026-10-06` for a daily menu, or
+Use `GET /api/v1/communities/{id}/menu?date=2026-10-06` for a daily menu, or
 `?from=2026-10-06&to=2026-10-12` for a week. Kitchen-specific menus use the same
 date filters. All money is integer paise; timestamps include a UTC offset.
 
-Checkout accepts listing IDs, quantities, fulfillment choice and optional note.
-The server derives the customer, kitchen, society, price, fees and total. Supply
+Checkout accepts listing IDs, quantities, `fulfillment_type` (`pickup` or
+`delivery`), destination details and an optional note.
+The server derives the customer, kitchen, community, price, fees and total. Supply
 an `Idempotency-Key` header, reusing it only for a retry of the same order.
 An order is pending until accepted; customer cancellation is allowed from
 pending or accepted, and only the owning kitchen can advance preparation.
+
+## Pickup and home delivery
+
+A pickup point is a named collection location with an address label, optional
+zone and instructions. It can be the home kitchen address or another place.
+Platform admins create shared points through
+`POST /api/v1/communities/{id}/pickup-points`. Kitchen owners manage their own
+points through `GET/POST /api/v1/kitchens/{id}/pickup-points` and
+`PATCH /api/v1/kitchens/{id}/pickup-points/{point_id}`. Members can list eligible
+community points; owners cannot edit shared points or another kitchen's points.
+Use `PATCH` with `active: false` to retire a point; referenced locations are retained.
+
+A kitchen created with an address gets a pickup point at that address. These are
+independent records: edit the pickup point when collection instructions or its
+location change. Listings accept `pickup_point_ids`; omitting them on creation
+defaults pickup to the kitchen's first eligible point. Pickup-enabled listings need
+at least one point, and delivery-only listings have none. Listing responses
+include eligible `pickup_points`. A point is eligible only when it is active and
+has either no zone or an active zone in the same community. This rule applies to
+member discovery, listing assignment, and automatic selection at listing creation
+and checkout. Deactivating a zone hides its points from member discovery and
+listing responses; pickup-only listings with no eligible points are not orderable.
+Admin and kitchen management lists retain these points for editing, and existing
+order snapshots and checkout retries remain unchanged. Offered points must belong
+to the same community, and assignments cannot change while portions remain reserved.
+
+For pickup checkout, send `pickup_point_id`. It must be eligible and offered by
+every listing in the basket. If exactly one eligible point is common to all items,
+omitting the ID selects that point. Multiple choices require an explicit ID.
+No home address is required, and pickup has no delivery fee.
+
+For delivery checkout, send `fulfillment_type: "delivery"` and optionally
+`delivery_address: {"zone_id": "...", "address_label": "House 42"}`. Without an
+explicit address, checkout uses the saved home address. A nonempty address label
+is required; any zone must belong to the order's community and be active.
+`PATCH /api/v1/me/memberships/{id}` lets members edit or clear their own home
+location. Choosing delivery confirms the supplied or saved home address.
+Delivery requires both kitchen and listing support and snapshots the kitchen fee.
+
+New orders store a version 2 `fulfillment_snapshot` and only the relevant
+`pickup_address` or `delivery_address`; the unused address is null. Pickup orders
+also store `pickup_point_id`. The snapshot remains unchanged after location edits.
+Idempotency hashes include submitted destination fields, so changing them with
+the same key returns a conflict. Retrying a committed order still returns its
+original destination even if the point has since been deactivated.
+
+`GET /api/v1/kitchens/{id}/fulfillment-groups?service_date=YYYY-MM-DD` is available
+to kitchen operators and platform admins. It groups accepted, preparing and ready
+orders by service window and agreed destination, with separate order and portion
+counts and linked order IDs. Pending, completed, rejected, cancelled and expired
+orders are excluded. Each customer's payment and order lifecycle remain separate.
+Dates use India time; destinations with different historical snapshots stay distinct.
+
+## Client onboarding
+
+The mobile and admin UIs are not implemented in this repository. Their contracts
+now support `Find your community → Join immediately → Browse menu`. Home details
+are optional and can be collected at delivery checkout. Residential communities
+can label zone/address inputs "Tower" and "Flat"; cantonments and other communities
+can use "Area / Zone" and "Home address". Community type chooses labels, without
+arbitrary dynamic forms. The proposed home-screen copy is
+"What's cooking near you today?", alongside the selected community name.
+
+## Community migration
+
+`0005_communities_pickup` renames societies, towers and their foreign keys while
+preserving existing UUIDs, membership states, kitchens, orders and reserved stock.
+Existing societies become residential communities, towers become root tower zones,
+and kitchen addresses become pickup points offered by existing pickup listings.
+Historical address JSON remains untouched and is translated when read; existing
+idempotency keys retain their original hashing rules.
+
+This changes the API contracts: `/societies` becomes `/communities`, `/towers`
+becomes `/zones`, `society_id` becomes `community_id`, `tower_id` becomes `zone_id`,
+and `flat` becomes `address_label`. No legacy route aliases are provided. Regenerated
+contracts are in `docs/openapi`; API consumers need to update alongside this backend.
+
+Stop both APIs and the worker, back up the database, apply `uv run alembic upgrade head`,
+then start the updated services together. The migration is forward-only because
+new community hierarchies and fulfillment destinations cannot be represented by
+the old schema. Rollback requires restoring the pre-migration database backup.
 
 Optional push delivery commits each notification separately, releasing device
 locks before claiming another notification. Delivery is at least once; clients
@@ -264,6 +357,6 @@ uv run python scripts/export_openapi.py
 ```
 
 Integration tests cover concurrent reservations, checkout retries, stock
-release, ownership and society boundaries, onboarding and the order lifecycle.
+release, ownership and community boundaries, onboarding and the order lifecycle.
 Auth tests use RSA-signed tokens from a mocked Zitadel provider with real Redis;
 they do not claim a live sign-in against your Zitadel deployment.

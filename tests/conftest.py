@@ -9,6 +9,11 @@ from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session, sessionmaker
 
 os.environ.setdefault("KITCHEN_ENVIRONMENT", "test")
+# Keep authorization-boundary tests independent of a developer's optional .env.
+os.environ.setdefault("KITCHEN_OIDC_ISSUER_URL", "https://identity.example.test")
+os.environ.setdefault("KITCHEN_OIDC_ORGANIZATION_ID", "test-org")
+os.environ.setdefault("KITCHEN_ADMIN_OIDC_CLIENT_ID", "test-admin")
+os.environ.setdefault("KITCHEN_ADMIN_BASE_URL", "https://admin.example.test")
 os.environ.setdefault("KITCHEN_REDIS_URL", "redis://127.0.0.1:56379/15")
 
 from kitchen_core.db import get_session

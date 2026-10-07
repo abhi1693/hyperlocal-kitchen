@@ -6,6 +6,8 @@ from datetime import timedelta
 
 import pytest
 from kitchen_core.models import (
+    Community,
+    CommunityZone,
     Device,
     Dish,
     Kitchen,
@@ -17,8 +19,6 @@ from kitchen_core.models import (
     OrderEvent,
     OrderIdempotency,
     OrderItem,
-    Society,
-    Tower,
     User,
     utcnow,
 )
@@ -40,15 +40,15 @@ def make_listing(kitchen, dish, *, days=0):
     )
 
 
-def make_order(society, kitchen, customer):
+def make_order(community, kitchen, customer):
     ready = utcnow() + timedelta(hours=2)
     return Order(
-        society_id=society.id,
+        community_id=community.id,
         kitchen_id=kitchen.id,
         customer_id=customer.id,
         fulfillment_type="pickup",
-        pickup_address={"tower": "Tower A", "flat": "A-101"},
-        delivery_address={"tower": "Tower A", "flat": "A-102"},
+        pickup_address={"zone": "Zone A", "address_label": "A-101"},
+        delivery_address={"zone": "Zone A", "address_label": "A-102"},
         available_from=ready,
         available_until=ready + timedelta(hours=1),
         expires_at=utcnow() + timedelta(minutes=15),
@@ -60,8 +60,8 @@ def make_order(society, kitchen, customer):
 
 @pytest.fixture
 def model_graph(session):
-    societies = [
-        Society(
+    communities = [
+        Community(
             name=name,
             address=name + " Road",
             city="Pune",
@@ -74,39 +74,39 @@ def model_graph(session):
         User(oidc_subject=name.lower(), oidc_issuer="https://identity.example.test", name=name)
         for name in ("Owner", "Manager", "Customer", "Unjoined")
     ]
-    session.add_all([*societies, owner, manager, customer, unjoined])
+    session.add_all([*communities, owner, manager, customer, unjoined])
     session.flush()
-    garden, park = societies
-    towers = [Tower(society_id=society.id, name="Tower A") for society in societies]
-    session.add_all(towers)
+    garden, park = communities
+    zones = [CommunityZone(community_id=community.id, name="Zone A") for community in communities]
+    session.add_all(zones)
     session.flush()
-    garden_tower, park_tower = towers
+    garden_zone, park_zone = zones
     memberships = [
         Membership(
-            society_id=society.id,
+            community_id=community.id,
             user_id=user.id,
-            tower_id=tower.id,
-            flat=f"A-{index + 101}",
+            zone_id=zone.id,
+            address_label=f"A-{index + 101}",
             status="active",
         )
-        for index, (society, tower, user) in enumerate(
+        for index, (community, zone, user) in enumerate(
             [
-                (garden, garden_tower, owner),
-                (garden, garden_tower, manager),
-                (garden, garden_tower, customer),
-                (park, park_tower, owner),
+                (garden, garden_zone, owner),
+                (garden, garden_zone, manager),
+                (garden, garden_zone, customer),
+                (park, park_zone, owner),
             ]
         )
     ]
     kitchens = [
         Kitchen(
-            society_id=society.id,
-            tower_id=tower.id,
-            flat="A-101",
-            name=society.name + " Kitchen",
+            community_id=community.id,
+            zone_id=zone.id,
+            address_label="A-101",
+            name=community.name + " Kitchen",
             status="approved",
         )
-        for society, tower in zip(societies, towers, strict=True)
+        for community, zone in zip(communities, zones, strict=True)
     ]
     session.add_all([*memberships, *kitchens])
     session.flush()
@@ -154,8 +154,8 @@ def model_graph(session):
         manager=manager,
         customer=customer,
         unjoined=unjoined,
-        garden_tower=garden_tower,
-        park_tower=park_tower,
+        garden_zone=garden_zone,
+        park_zone=park_zone,
         kitchen=kitchen,
         other_kitchen=other_kitchen,
         dish=dish,
@@ -193,9 +193,9 @@ def test_many_to_many_associations_preserve_role_and_resident_address(session, m
     graph = model_graph
     session.expire_all()
     owner, kitchen = graph["owner"], graph["kitchen"]
-    assert {membership.society.name for membership in owner.memberships} == {"Garden", "Park"}
-    assert {membership.tower.name for membership in owner.memberships} == {"Tower A"}
-    assert {membership.flat for membership in owner.memberships} == {"A-101", "A-104"}
+    assert {membership.community.name for membership in owner.memberships} == {"Garden", "Park"}
+    assert {membership.zone.name for membership in owner.memberships} == {"Zone A"}
+    assert {membership.address_label for membership in owner.memberships} == {"A-101", "A-104"}
     assert {membership.kitchen.name for membership in owner.kitchen_memberships} == {
         "Garden Kitchen",
         "Park Kitchen",
@@ -209,11 +209,11 @@ def test_many_to_many_associations_preserve_role_and_resident_address(session, m
         "Manager",
         "Customer",
     }
-    assert graph["garden_tower"].society is graph["garden"]
-    assert kitchen.society is graph["garden"]
-    assert kitchen.tower is graph["garden_tower"]
+    assert graph["garden_zone"].community is graph["garden"]
+    assert kitchen.community is graph["garden"]
+    assert kitchen.zone is graph["garden_zone"]
     assert graph["device"].user is graph["customer"]
-    assert {society.name for society in owner.societies} == {"Garden", "Park"}
+    assert {community.name for community in owner.communities} == {"Garden", "Park"}
     assert {row.name for row in owner.kitchens} == {"Garden Kitchen", "Park Kitchen"}
     assert {user.name for user in graph["garden"].users} == {"Owner", "Manager", "Customer"}
     assert {user.name for user in kitchen.members} == {"Owner", "Manager"}
@@ -238,7 +238,7 @@ def test_reusable_dish_listings_and_order_history_traverse_both_directions(sessi
     assert {row.id for row in dish.listings} == {listing.id, graph["tomorrow"].id}
     assert listing.dish is dish and listing.kitchen is graph["kitchen"]
     assert order.customer is graph["customer"]
-    assert order.society is graph["garden"] and order.kitchen is graph["kitchen"]
+    assert order.community is graph["garden"] and order.kitchen is graph["kitchen"]
     assert order.items[0].listing is listing
     assert listing.order_items[0].order is order
     assert order.events[0].order is order and order.events[0].actor is graph["customer"]
@@ -255,28 +255,28 @@ def test_reusable_dish_listings_and_order_history_traverse_both_directions(sessi
 
 @pytest.mark.parametrize(
     "invalid_link",
-    ["membership_tower", "kitchen_tower", "listing_dish", "order_society", "idempotency_customer"],
+    ["membership_zone", "kitchen_zone", "listing_dish", "order_community", "idempotency_customer"],
 )
 def test_database_rejects_cross_boundary_foreign_keys(session, model_graph, invalid_link):
     graph = model_graph
-    if invalid_link == "membership_tower":
+    if invalid_link == "membership_zone":
         row = Membership(
-            society_id=graph["garden"].id,
-            tower_id=graph["park_tower"].id,
+            community_id=graph["garden"].id,
+            zone_id=graph["park_zone"].id,
             user_id=graph["unjoined"].id,
-            flat="A-201",
+            address_label="A-201",
             status="active",
         )
-    elif invalid_link == "kitchen_tower":
+    elif invalid_link == "kitchen_zone":
         row = Kitchen(
-            society_id=graph["garden"].id,
-            tower_id=graph["park_tower"].id,
+            community_id=graph["garden"].id,
+            zone_id=graph["park_zone"].id,
             name="Cross-boundary kitchen",
-            flat="A-201",
+            address_label="A-201",
         )
     elif invalid_link == "listing_dish":
         row = make_listing(graph["other_kitchen"], graph["dish"])
-    elif invalid_link == "order_society":
+    elif invalid_link == "order_community":
         row = make_order(graph["garden"], graph["other_kitchen"], graph["customer"])
     else:
         extra_order = make_order(graph["garden"], graph["kitchen"], graph["customer"])
@@ -296,15 +296,15 @@ def test_database_rejects_cross_boundary_foreign_keys(session, model_graph, inva
     )  # foreign_key_violation, not a duplicate or null error
 
 
-@pytest.mark.parametrize("association", ["society_membership", "kitchen_membership"])
+@pytest.mark.parametrize("association", ["community_membership", "kitchen_membership"])
 def test_association_membership_is_unique(session, model_graph, association):
     graph = model_graph
-    if association == "society_membership":
+    if association == "community_membership":
         row = Membership(
-            society_id=graph["garden"].id,
-            tower_id=graph["garden_tower"].id,
+            community_id=graph["garden"].id,
+            zone_id=graph["garden_zone"].id,
             user_id=graph["owner"].id,
-            flat="A-999",
+            address_label="A-999",
             status="active",
         )
     else:
@@ -317,14 +317,14 @@ def test_association_membership_is_unique(session, model_graph, association):
     assert error.value.orig.sqlstate == "23505"
 
 
-@pytest.mark.parametrize("reparent", ["tower_society", "dish_kitchen", "order_customer"])
+@pytest.mark.parametrize("reparent", ["zone_community", "dish_kitchen", "order_customer"])
 def test_reparenting_cannot_invalidate_existing_foreign_keys(session, model_graph, reparent):
     graph = model_graph
-    if reparent == "tower_society":
+    if reparent == "zone_community":
         statement = (
-            update(Tower)
-            .where(Tower.id == graph["garden_tower"].id)
-            .values(society_id=graph["park"].id, name="Moved Tower")
+            update(CommunityZone)
+            .where(CommunityZone.id == graph["garden_zone"].id)
+            .values(community_id=graph["park"].id, name="Moved CommunityZone")
         )
     elif reparent == "dish_kitchen":
         statement = (
@@ -347,17 +347,17 @@ def test_relationship_assignment_persists_association_details(session, model_gra
     graph = model_graph
     membership = Membership(
         user=graph["unjoined"],
-        society=graph["garden"],
-        tower=graph["garden_tower"],
-        flat="A-501",
+        community=graph["garden"],
+        zone=graph["garden_zone"],
+        address_label="A-501",
     )
     session.add(membership)
     session.flush()
     assert membership.user_id == graph["unjoined"].id
-    assert membership.society_id == graph["garden"].id
-    assert membership.tower_id == graph["garden_tower"].id
+    assert membership.community_id == graph["garden"].id
+    assert membership.zone_id == graph["garden_zone"].id
     session.expire_all()
-    assert graph["unjoined"].memberships[0].flat == "A-501"
+    assert graph["unjoined"].memberships[0].address_label == "A-501"
     assert graph["unjoined"].memberships[0].status == "active"
 
 

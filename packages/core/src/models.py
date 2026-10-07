@@ -1,7 +1,7 @@
-"""MVP entities with explicit association objects and society-scoped references.
+"""MVP entities with explicit association objects and community-scoped references.
 
 Memberships and kitchen memberships own writes to their many-to-many links.
-Convenience user/society/kitchen collections are read-only. Historical orders
+Convenience user/community/kitchen collections are read-only. Historical orders
 and their child records restrict parent deletion; lifecycle uses soft states.
 """
 
@@ -27,6 +27,8 @@ from sqlalchemy import (
     UniqueConstraint,
     Uuid,
     and_,
+    or_,
+    select,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, foreign, mapped_column, relationship
 
@@ -69,96 +71,133 @@ class User(Entity, Base):
         back_populates="user", passive_deletes="all"
     )
     devices: Mapped[list[Device]] = relationship(back_populates="user", passive_deletes="all")
-    societies: Mapped[list[Society]] = relationship(
-        secondary="society_memberships", back_populates="users", viewonly=True
+    communities: Mapped[list[Community]] = relationship(
+        secondary="community_memberships", back_populates="users", viewonly=True
     )
     kitchens: Mapped[list[Kitchen]] = relationship(
         secondary="kitchen_members", back_populates="members", viewonly=True
     )
 
 
-class Society(Entity, Base):
-    __tablename__ = "societies"
+COMMUNITY_TYPES = (
+    "residential_society",
+    "cantonment",
+    "housing_colony",
+    "university",
+    "corporate_campus",
+    "gated_community",
+    "other",
+)
+ZONE_TYPES = ("tower", "area", "hostel", "block", "other")
+
+
+class Community(Entity, Base):
+    __tablename__ = "communities"
     name: Mapped[str] = mapped_column(String(200))
-    address: Mapped[str] = mapped_column(Text)
+    address: Mapped[str | None] = mapped_column(Text)
     city: Mapped[str] = mapped_column(String(100))
-    postal_code: Mapped[str] = mapped_column(String(20))
+    postal_code: Mapped[str | None] = mapped_column(String(20))
     status: Mapped[str] = mapped_column(String(20), default="draft")
-    __table_args__ = (CheckConstraint("status IN ('draft','active','paused')"),)
+    type: Mapped[str] = mapped_column(
+        String(30), default="residential_society", server_default="residential_society"
+    )
+    __table_args__ = (
+        CheckConstraint("status IN ('draft','active','paused')"),
+        CheckConstraint("type IN " + str(COMMUNITY_TYPES), name="communities_type_check"),
+    )
 
-    towers: Mapped[list[Tower]] = relationship(back_populates="society", passive_deletes="all")
+    zones: Mapped[list[CommunityZone]] = relationship(
+        back_populates="community", passive_deletes="all"
+    )
     memberships: Mapped[list[Membership]] = relationship(
-        back_populates="society", passive_deletes="all"
+        back_populates="community", passive_deletes="all"
     )
-    kitchens: Mapped[list[Kitchen]] = relationship(back_populates="society", passive_deletes="all")
-    orders: Mapped[list[Order]] = relationship(back_populates="society", passive_deletes="all")
+    kitchens: Mapped[list[Kitchen]] = relationship(
+        back_populates="community", passive_deletes="all"
+    )
+    orders: Mapped[list[Order]] = relationship(back_populates="community", passive_deletes="all")
     users: Mapped[list[User]] = relationship(
-        secondary="society_memberships", back_populates="societies", viewonly=True
+        secondary="community_memberships", back_populates="communities", viewonly=True
     )
 
 
-class Tower(Entity, Base):
-    __tablename__ = "towers"
-    society_id: Mapped[UUID] = mapped_column(ForeignKey("societies.id"), index=True)
+class CommunityZone(Entity, Base):
+    __tablename__ = "community_zones"
+    parent_zone_id: Mapped[UUID | None] = mapped_column(Uuid)
+    zone_type: Mapped[str] = mapped_column(String(20), default="other", server_default="other")
+    active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    community_id: Mapped[UUID] = mapped_column(ForeignKey("communities.id"), index=True)
     name: Mapped[str] = mapped_column(String(100))
     __table_args__ = (
-        UniqueConstraint("society_id", "name"),
-        UniqueConstraint("id", "society_id", name="uq_towers_id_society"),
+        UniqueConstraint("community_id", "name"),
+        CheckConstraint("zone_type IN " + str(ZONE_TYPES), name="community_zones_type_check"),
+        CheckConstraint(
+            "parent_zone_id IS NULL OR parent_zone_id != id", name="zone_not_self_parent"
+        ),
+        ForeignKeyConstraint(
+            ["parent_zone_id", "community_id"],
+            ["community_zones.id", "community_zones.community_id"],
+            name="fk_zone_parent_community",
+        ),
+        UniqueConstraint("id", "community_id", name="uq_zones_id_community"),
     )
 
-    society: Mapped[Society] = relationship(back_populates="towers")
+    community: Mapped[Community] = relationship(back_populates="zones")
     memberships: Mapped[list[Membership]] = relationship(
-        back_populates="tower",
+        back_populates="zone",
         primaryjoin=lambda: and_(
-            Tower.id == foreign(Membership.tower_id), Tower.society_id == Membership.society_id
+            CommunityZone.id == foreign(Membership.zone_id),
+            CommunityZone.community_id == Membership.community_id,
         ),
         passive_deletes="all",
     )
     kitchens: Mapped[list[Kitchen]] = relationship(
-        back_populates="tower",
+        back_populates="zone",
         primaryjoin=lambda: and_(
-            Tower.id == foreign(Kitchen.tower_id), Tower.society_id == Kitchen.society_id
+            CommunityZone.id == foreign(Kitchen.zone_id),
+            CommunityZone.community_id == Kitchen.community_id,
         ),
         passive_deletes="all",
     )
 
 
 class Membership(Entity, Base):
-    __tablename__ = "society_memberships"
-    society_id: Mapped[UUID] = mapped_column(ForeignKey("societies.id"), index=True)
+    __tablename__ = "community_memberships"
+    community_id: Mapped[UUID] = mapped_column(ForeignKey("communities.id"), index=True)
     user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"), index=True)
-    tower_id: Mapped[UUID] = mapped_column(Uuid)
-    flat: Mapped[str] = mapped_column(String(50))
+    zone_id: Mapped[UUID | None] = mapped_column(Uuid)
+    address_label: Mapped[str | None] = mapped_column(String(250))
     status: Mapped[str] = mapped_column(String(20), default="active", server_default="active")
     __table_args__ = (
-        UniqueConstraint("society_id", "user_id"),
+        UniqueConstraint("community_id", "user_id"),
         CheckConstraint(
-            "status IN ('active','suspended')", name="society_memberships_status_check"
+            "status IN ('active','suspended')", name="community_memberships_status_check"
         ),
         ForeignKeyConstraint(
-            ["tower_id", "society_id"],
-            ["towers.id", "towers.society_id"],
-            name="fk_membership_tower_society",
+            ["zone_id", "community_id"],
+            ["community_zones.id", "community_zones.community_id"],
+            name="fk_membership_zone_community",
         ),
     )
 
-    society: Mapped[Society] = relationship(back_populates="memberships")
+    community: Mapped[Community] = relationship(back_populates="memberships")
     user: Mapped[User] = relationship(back_populates="memberships")
-    tower: Mapped[Tower] = relationship(
+    zone: Mapped[CommunityZone | None] = relationship(
         back_populates="memberships",
         primaryjoin=lambda: and_(
-            foreign(Membership.tower_id) == Tower.id, Membership.society_id == Tower.society_id
+            foreign(Membership.zone_id) == CommunityZone.id,
+            Membership.community_id == CommunityZone.community_id,
         ),
     )
 
 
 class Kitchen(Entity, Base):
     __tablename__ = "kitchens"
-    society_id: Mapped[UUID] = mapped_column(ForeignKey("societies.id"), index=True)
+    community_id: Mapped[UUID] = mapped_column(ForeignKey("communities.id"), index=True)
     name: Mapped[str] = mapped_column(String(150))
     description: Mapped[str | None] = mapped_column(Text)
-    tower_id: Mapped[UUID] = mapped_column(Uuid)
-    flat: Mapped[str] = mapped_column(String(50))
+    zone_id: Mapped[UUID | None] = mapped_column(Uuid)
+    address_label: Mapped[str | None] = mapped_column(String(250))
     pickup_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     delivery_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     delivery_fee_paise: Mapped[int] = mapped_column(Integer, default=0)
@@ -169,19 +208,20 @@ class Kitchen(Entity, Base):
         CheckConstraint("status IN ('pending','approved','suspended')"),
         CheckConstraint("pickup_enabled OR delivery_enabled"),
         CheckConstraint("delivery_fee_paise >= 0"),
-        UniqueConstraint("id", "society_id", name="uq_kitchens_id_society"),
+        UniqueConstraint("id", "community_id", name="uq_kitchens_id_community"),
         ForeignKeyConstraint(
-            ["tower_id", "society_id"],
-            ["towers.id", "towers.society_id"],
-            name="fk_kitchen_tower_society",
+            ["zone_id", "community_id"],
+            ["community_zones.id", "community_zones.community_id"],
+            name="fk_kitchen_zone_community",
         ),
     )
 
-    society: Mapped[Society] = relationship(back_populates="kitchens")
-    tower: Mapped[Tower] = relationship(
+    community: Mapped[Community] = relationship(back_populates="kitchens")
+    zone: Mapped[CommunityZone | None] = relationship(
         back_populates="kitchens",
         primaryjoin=lambda: and_(
-            foreign(Kitchen.tower_id) == Tower.id, Kitchen.society_id == Tower.society_id
+            foreign(Kitchen.zone_id) == CommunityZone.id,
+            Kitchen.community_id == CommunityZone.community_id,
         ),
     )
     memberships: Mapped[list[KitchenMember]] = relationship(
@@ -197,7 +237,7 @@ class Kitchen(Entity, Base):
     orders: Mapped[list[Order]] = relationship(
         back_populates="kitchen",
         primaryjoin=lambda: and_(
-            Kitchen.id == foreign(Order.kitchen_id), Kitchen.society_id == Order.society_id
+            Kitchen.id == foreign(Order.kitchen_id), Kitchen.community_id == Order.community_id
         ),
         passive_deletes="all",
     )
@@ -248,6 +288,7 @@ class MenuListing(Entity, Base):
     delivery_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     status: Mapped[str] = mapped_column(String(20), default="published")
     __table_args__ = (
+        UniqueConstraint("id", "kitchen_id", name="uq_listings_id_kitchen"),
         Index("ix_listings_feed", "service_date", "status", "kitchen_id"),
         CheckConstraint("status IN ('draft','published','cancelled')"),
         CheckConstraint("price_paise >= 0"),
@@ -278,14 +319,16 @@ class MenuListing(Entity, Base):
 class Order(Entity, Base):
     __tablename__ = "orders"
     order_number: Mapped[int] = mapped_column(BigInteger, Identity(start=1001), unique=True)
-    society_id: Mapped[UUID] = mapped_column(ForeignKey("societies.id"))
+    community_id: Mapped[UUID] = mapped_column(ForeignKey("communities.id"))
     kitchen_id: Mapped[UUID] = mapped_column(Uuid, index=True)
     customer_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"), index=True)
     status: Mapped[str] = mapped_column(String(30), default="pending")
     fulfillment_type: Mapped[str] = mapped_column(String(20))
     customer_note: Mapped[str | None] = mapped_column(String(1000))
-    pickup_address: Mapped[dict] = mapped_column(JSON)
-    delivery_address: Mapped[dict] = mapped_column(JSON)
+    pickup_point_id: Mapped[UUID | None] = mapped_column(Uuid)
+    fulfillment_snapshot: Mapped[dict | None] = mapped_column(JSON)
+    pickup_address: Mapped[dict | None] = mapped_column(JSON)
+    delivery_address: Mapped[dict | None] = mapped_column(JSON)
     available_from: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     available_until: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
@@ -295,6 +338,15 @@ class Order(Entity, Base):
     payment_status: Mapped[str] = mapped_column(String(30), default="unpaid")
     upi_id: Mapped[str | None] = mapped_column(String(150))
     __table_args__ = (
+        ForeignKeyConstraint(
+            ["pickup_point_id", "community_id"],
+            ["pickup_points.id", "pickup_points.community_id"],
+            name="fk_order_pickup_community",
+        ),
+        CheckConstraint(
+            "fulfillment_type = 'pickup' OR pickup_point_id IS NULL",
+            name="order_delivery_no_pickup",
+        ),
         Index("ix_orders_kitchen_status", "kitchen_id", "status", "created_at"),
         CheckConstraint(
             "status IN ('pending','accepted','preparing','ready','completed',"
@@ -306,17 +358,17 @@ class Order(Entity, Base):
         CheckConstraint("total_paise = subtotal_paise + delivery_fee_paise"),
         UniqueConstraint("id", "customer_id", name="uq_orders_id_customer"),
         ForeignKeyConstraint(
-            ["kitchen_id", "society_id"],
-            ["kitchens.id", "kitchens.society_id"],
-            name="fk_order_kitchen_society",
+            ["kitchen_id", "community_id"],
+            ["kitchens.id", "kitchens.community_id"],
+            name="fk_order_kitchen_community",
         ),
     )
 
-    society: Mapped[Society] = relationship(back_populates="orders")
+    community: Mapped[Community] = relationship(back_populates="orders")
     kitchen: Mapped[Kitchen] = relationship(
         back_populates="orders",
         primaryjoin=lambda: and_(
-            foreign(Order.kitchen_id) == Kitchen.id, Order.society_id == Kitchen.society_id
+            foreign(Order.kitchen_id) == Kitchen.id, Order.community_id == Kitchen.community_id
         ),
     )
     customer: Mapped[User] = relationship(back_populates="orders")
@@ -362,6 +414,7 @@ class OrderIdempotency(Base):
     customer_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"), primary_key=True)
     key: Mapped[str] = mapped_column(String(120), primary_key=True)
     request_hash: Mapped[str] = mapped_column(String(64))
+    hash_version: Mapped[int] = mapped_column(Integer, default=2, server_default="2")
     order_id: Mapped[UUID] = mapped_column(Uuid, unique=True)
     __table_args__ = (
         ForeignKeyConstraint(
@@ -416,3 +469,66 @@ class Device(Entity, Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     user: Mapped[User] = relationship(back_populates="devices")
+
+
+class PickupPoint(Entity, Base):
+    __tablename__ = "pickup_points"
+    community_id: Mapped[UUID] = mapped_column(ForeignKey("communities.id"), index=True)
+    kitchen_id: Mapped[UUID | None] = mapped_column(Uuid, index=True)
+    zone_id: Mapped[UUID | None] = mapped_column(Uuid)
+    name: Mapped[str] = mapped_column(String(150))
+    address_label: Mapped[str] = mapped_column(String(250))
+    instructions: Mapped[str | None] = mapped_column(String(1000))
+    active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    __table_args__ = (
+        UniqueConstraint("id", "community_id", name="uq_pickup_points_id_community"),
+        ForeignKeyConstraint(
+            ["zone_id", "community_id"],
+            ["community_zones.id", "community_zones.community_id"],
+            name="fk_pickup_zone_community",
+        ),
+        ForeignKeyConstraint(
+            ["kitchen_id", "community_id"],
+            ["kitchens.id", "kitchens.community_id"],
+            name="fk_pickup_kitchen_community",
+        ),
+    )
+
+
+class ListingPickupPoint(Base):
+    __tablename__ = "listing_pickup_points"
+    listing_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    pickup_point_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    kitchen_id: Mapped[UUID] = mapped_column(Uuid)
+    community_id: Mapped[UUID] = mapped_column(Uuid)
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["listing_id", "kitchen_id"],
+            ["menu_listings.id", "menu_listings.kitchen_id"],
+            name="fk_listing_pickup_listing",
+        ),
+        ForeignKeyConstraint(
+            ["kitchen_id", "community_id"],
+            ["kitchens.id", "kitchens.community_id"],
+            name="fk_listing_pickup_kitchen",
+        ),
+        ForeignKeyConstraint(
+            ["pickup_point_id", "community_id"],
+            ["pickup_points.id", "pickup_points.community_id"],
+            name="fk_listing_pickup_point",
+        ),
+    )
+
+
+def eligible_pickup_point():
+    """A point is usable when active and either unzoned or in its active community zone."""
+    active_zone = (
+        select(CommunityZone.id)
+        .where(
+            CommunityZone.id == PickupPoint.zone_id,
+            CommunityZone.community_id == PickupPoint.community_id,
+            CommunityZone.active.is_(True),
+        )
+        .exists()
+    )
+    return and_(PickupPoint.active.is_(True), or_(PickupPoint.zone_id.is_(None), active_zone))

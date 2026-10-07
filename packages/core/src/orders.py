@@ -7,15 +7,20 @@ notifications commit together; this module never sends external notifications.
 import hashlib
 import json
 from collections import defaultdict
-from datetime import UTC, datetime, timedelta
-from typing import cast
+from datetime import UTC, date, datetime, time, timedelta
+from typing import Any, cast
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
+from kitchen_core import catalog
 from kitchen_core.errors import DomainError
 from kitchen_core.models import (
+    Community,
+    CommunityZone,
     Dish,
     Kitchen,
     KitchenMember,
+    ListingPickupPoint,
     Membership,
     MenuListing,
     Notification,
@@ -23,12 +28,13 @@ from kitchen_core.models import (
     OrderEvent,
     OrderIdempotency,
     OrderItem,
-    Society,
-    Tower,
+    PickupPoint,
     User,
+    eligible_pickup_point,
 )
 from kitchen_core.order_schemas import (
     AddressSnapshot,
+    FulfillmentGroup,
     FulfillmentType,
     OrderCreate,
     OrderEventOut,
@@ -64,8 +70,8 @@ def combined_items(payload: OrderCreate) -> dict[UUID, int]:
     return dict(sorted(quantities.items(), key=lambda item: str(item[0])))
 
 
-def request_hash(payload: OrderCreate) -> str:
-    canonical = {
+def request_hash(payload: OrderCreate, *, version: int = 2) -> str:
+    canonical: dict[str, Any] = {
         "items": [
             {"menu_listing_id": str(listing_id), "quantity": quantity}
             for listing_id, quantity in combined_items(payload).items()
@@ -73,20 +79,29 @@ def request_hash(payload: OrderCreate) -> str:
         "fulfillment_type": payload.fulfillment_type,
         "customer_note": payload.customer_note or None,
     }
+    if version >= 2:
+        canonical["pickup_point_id"] = (
+            str(payload.pickup_point_id) if payload.pickup_point_id else None
+        )
+        canonical["delivery_address"] = (
+            payload.delivery_address.model_dump(mode="json") if payload.delivery_address else None
+        )
     raw = json.dumps(canonical, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(raw.encode()).hexdigest()
 
 
-def _active_membership(session: Session, user_id: UUID, society_id: UUID) -> Membership:
+def _active_membership(session: Session, user_id: UUID, community_id: UUID) -> Membership:
     membership = session.scalar(
         select(Membership).where(
             Membership.user_id == user_id,
-            Membership.society_id == society_id,
+            Membership.community_id == community_id,
             Membership.status == "active",
         )
     )
     if membership is None:
-        raise DomainError(403, "society_access_denied", "Active society membership is required.")
+        raise DomainError(
+            403, "community_access_denied", "Active community membership is required."
+        )
     return membership
 
 
@@ -94,7 +109,7 @@ def _kitchen_access(session: Session, user_id: UUID, kitchen_id: UUID) -> Kitche
     kitchen = session.get(Kitchen, kitchen_id)
     if kitchen is None or session.get(KitchenMember, (kitchen_id, user_id)) is None:
         raise DomainError(404, "kitchen_not_found", "Kitchen not found.")
-    _active_membership(session, user_id, kitchen.society_id)
+    _active_membership(session, user_id, kitchen.community_id)
     return kitchen
 
 
@@ -147,7 +162,7 @@ def _kitchen_user_ids(session: Session, kitchen_id: UUID) -> list[UUID]:
                 Membership,
                 and_(
                     Membership.user_id == KitchenMember.user_id,
-                    Membership.society_id == Kitchen.society_id,
+                    Membership.community_id == Kitchen.community_id,
                 ),
             )
             .join(User, User.id == KitchenMember.user_id)
@@ -181,18 +196,34 @@ def _status_event(
         _notify(session, order, _kitchen_user_ids(session, order.kitchen_id), "order_status")
 
 
-def _snapshot_address(session: Session, society: Society, tower_id: UUID, flat: str) -> dict:
-    tower = session.get(Tower, tower_id)
-    if tower is None or tower.society_id != society.id:
-        raise DomainError(409, "invalid_address", "Select a valid tower before placing an order.")
+def _snapshot_address(
+    session: Session, community: Community, zone_id: UUID | None, address_label: str | None
+) -> dict:
+    catalog.validate_zone(session, community.id, zone_id)
+    zone = session.get(CommunityZone, zone_id) if zone_id else None
     return {
-        "society_name": society.name,
-        "address": society.address,
-        "city": society.city,
-        "postal_code": society.postal_code,
-        "tower_name": tower.name,
-        "flat": flat,
+        "version": 2,
+        "community_name": community.name,
+        "address": community.address,
+        "city": community.city,
+        "postal_code": community.postal_code,
+        "zone_name": zone.name if zone else None,
+        "address_label": address_label,
     }
+
+
+def _read_snapshot(value: dict | None) -> AddressSnapshot | None:
+    if value is None:
+        return None
+    if "society_name" in value:
+        value = {
+            **value,
+            "version": 1,
+            "community_name": value["society_name"],
+            "zone_name": value.get("tower_name"),
+            "address_label": value.get("flat"),
+        }
+    return AddressSnapshot.model_validate(value)
 
 
 def serialize_order(session: Session, order: Order) -> OrderOut:
@@ -207,11 +238,11 @@ def serialize_order(session: Session, order: Order) -> OrderOut:
     return OrderOut(
         id=order.id,
         order_number=order.order_number,
-        society_id=order.society_id,
+        community_id=order.community_id,
         kitchen_id=order.kitchen_id,
         customer_id=order.customer_id,
         kitchen_name=order.kitchen.name,
-        customer_name=order.customer.name or "Resident",
+        customer_name=order.customer.name or "Member",
         status=order.status,
         payment_status=cast(PaymentStatus, order.payment_status),
         upi_id=order.upi_id if order.status in PAYABLE_STATUSES else None,
@@ -235,8 +266,20 @@ def serialize_order(session: Session, order: Order) -> OrderOut:
         total_paise=order.total_paise,
         available_from=order.available_from,
         available_until=order.available_until,
-        pickup_address=AddressSnapshot.model_validate(order.pickup_address),
-        delivery_address=AddressSnapshot.model_validate(order.delivery_address),
+        pickup_point_id=order.pickup_point_id,
+        fulfillment_snapshot=cast(
+            AddressSnapshot,
+            _read_snapshot(
+                order.fulfillment_snapshot
+                or (
+                    order.pickup_address
+                    if order.fulfillment_type == "pickup"
+                    else order.delivery_address
+                )
+            ),
+        ),
+        pickup_address=_read_snapshot(order.pickup_address),
+        delivery_address=_read_snapshot(order.delivery_address),
         expires_at=order.expires_at,
         created_at=order.created_at,
         updated_at=events[-1].created_at if events else order.created_at,
@@ -272,7 +315,12 @@ def create_order(
     digest = request_hash(payload)
     previous = session.get(OrderIdempotency, (user.id, idempotency_key))
     if previous is not None:
-        if previous.request_hash != digest:
+        # Legacy keys were created before fulfillment destinations were request fields.
+        if previous.hash_version == 1 and (payload.pickup_point_id or payload.delivery_address):
+            raise DomainError(
+                409, "idempotency_conflict", "This key was used for a different order."
+            )
+        if previous.request_hash != request_hash(payload, version=previous.hash_version):
             raise DomainError(
                 409, "idempotency_conflict", "This key was used for a different order."
             )
@@ -300,11 +348,11 @@ def create_order(
     kitchen = session.get(Kitchen, listings[0].kitchen_id)
     if kitchen is None:
         raise DomainError(404, "kitchen_not_found", "Kitchen not found.")
-    society = session.get(Society, kitchen.society_id)
-    if society is None:
-        raise DomainError(404, "society_not_found", "Society not found.")
-    membership = _active_membership(session, user.id, kitchen.society_id)
-    if kitchen.status != "approved" or society.status != "active":
+    community = session.get(Community, kitchen.community_id)
+    if community is None:
+        raise DomainError(404, "community_not_found", "Community not found.")
+    membership = _active_membership(session, user.id, kitchen.community_id)
+    if kitchen.status != "approved" or community.status != "active":
         raise DomainError(409, "kitchen_unavailable", "This kitchen is not accepting orders.")
     if (
         len({(item.service_date, item.available_from, item.available_until) for item in listings})
@@ -316,6 +364,54 @@ def create_order(
     fulfillment = payload.fulfillment_type
     if not getattr(kitchen, f"{fulfillment}_enabled"):
         raise DomainError(409, "fulfillment_unavailable", "This fulfillment option is unavailable.")
+
+    point = None
+    if fulfillment == "pickup":
+        offered = None
+        for listing in listings:
+            ids = set(
+                session.scalars(
+                    select(ListingPickupPoint.pickup_point_id).where(
+                        ListingPickupPoint.listing_id == listing.id
+                    )
+                )
+            )
+            offered = ids if offered is None else offered & ids
+        offered = offered or set()
+        selected = payload.pickup_point_id
+        # A sole offered active point is the implicit selection for a simple checkout.
+        if selected is None:
+            active_ids = list(
+                session.scalars(
+                    select(PickupPoint.id).where(
+                        PickupPoint.id.in_(offered), eligible_pickup_point()
+                    )
+                )
+            )
+            if len(active_ids) != 1:
+                raise DomainError(422, "pickup_point_required", "Choose a pickup point.")
+            selected = active_ids[0]
+        if selected not in offered:
+            raise DomainError(
+                422, "pickup_point_unavailable", "This point is not offered by every listing."
+            )
+        point = session.scalar(
+            select(PickupPoint)
+            .where(PickupPoint.id == selected, eligible_pickup_point())
+            .with_for_update(read=True)
+            .execution_options(populate_existing=True)
+        )
+        if point is None or not point.active or point.community_id != community.id:
+            raise DomainError(409, "pickup_point_unavailable", "This pickup point is unavailable.")
+        snapshot = _snapshot_address(session, community, point.zone_id, point.address_label)
+        snapshot.update(name=point.name, instructions=point.instructions)
+    else:
+        destination = payload.delivery_address
+        zone_id = destination.zone_id if destination else membership.zone_id
+        address_label = destination.address_label if destination else membership.address_label
+        if not address_label:
+            raise DomainError(422, "delivery_address_required", "Provide a home delivery address.")
+        snapshot = _snapshot_address(session, community, zone_id, address_label)
 
     now = utcnow()
     subtotal = 0
@@ -340,14 +436,16 @@ def create_order(
     if subtotal + delivery_fee > 2_147_483_647:
         raise DomainError(422, "order_total_limit", "The order total exceeds the supported limit.")
     order = Order(
-        society_id=society.id,
+        community_id=community.id,
         kitchen_id=kitchen.id,
         customer_id=user.id,
         status="pending",
         fulfillment_type=fulfillment,
         customer_note=payload.customer_note or None,
-        pickup_address=_snapshot_address(session, society, kitchen.tower_id, kitchen.flat),
-        delivery_address=_snapshot_address(session, society, membership.tower_id, membership.flat),
+        pickup_point_id=point.id if point else None,
+        fulfillment_snapshot=snapshot,
+        pickup_address=snapshot if fulfillment == "pickup" else None,
+        delivery_address=snapshot if fulfillment == "delivery" else None,
         available_from=listings[0].available_from,
         available_until=listings[0].available_until,
         expires_at=min(
@@ -548,3 +646,69 @@ def record_payment(
     )
     _notify(session, order, recipients, "payment_status")
     return serialize_order(session, order)
+
+
+def fulfillment_groups(
+    session: Session,
+    user: User | None,
+    kitchen_id: UUID,
+    service_date: date,
+    *,
+    admin: bool = False,
+) -> list[FulfillmentGroup]:
+    """Accepted, uncompleted orders grouped by agreed collection/delivery destination."""
+    if admin:
+        catalog._get(session, Kitchen, kitchen_id)
+    else:
+        if user is None:
+            raise DomainError(403, "kitchen_access_denied", "Sign in to manage this kitchen.")
+        _kitchen_access(session, user.id, kitchen_id)
+    start = datetime.combine(service_date, time.min, tzinfo=ZoneInfo("Asia/Kolkata"))
+    portions = (
+        select(func.sum(OrderItem.quantity)).where(OrderItem.order_id == Order.id).scalar_subquery()
+    )
+    rows = session.execute(
+        select(Order, portions)
+        .where(
+            Order.kitchen_id == kitchen_id,
+            Order.status.in_(["accepted", "preparing", "ready"]),
+            Order.available_from >= start,
+            Order.available_from < start + timedelta(days=1),
+        )
+        .order_by(Order.available_from, Order.created_at, Order.id)
+    )
+    groups: dict[tuple, FulfillmentGroup] = {}
+    for order, quantity in rows:
+        snapshot = _read_snapshot(
+            order.fulfillment_snapshot
+            or (
+                order.pickup_address
+                if order.fulfillment_type == "pickup"
+                else order.delivery_address
+            )
+        )
+        if snapshot is None:
+            raise DomainError(409, "invalid_address", "This order has no fulfillment address.")
+        key = (
+            order.available_from,
+            order.available_until,
+            order.fulfillment_type,
+            order.pickup_point_id,
+            snapshot.model_dump_json(),
+        )
+        if key not in groups:
+            groups[key] = FulfillmentGroup(
+                fulfillment_type=order.fulfillment_type,
+                pickup_point_id=order.pickup_point_id,
+                fulfillment_snapshot=snapshot,
+                available_from=order.available_from,
+                available_until=order.available_until,
+                order_count=0,
+                portion_count=0,
+                order_ids=[],
+            )
+        group = groups[key]
+        group.order_count += 1
+        group.portion_count += quantity or 0
+        group.order_ids.append(order.id)
+    return list(groups.values())

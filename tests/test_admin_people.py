@@ -8,13 +8,13 @@ from uuid import UUID
 import pytest
 from kitchen_core.admin_people import set_user_active
 from kitchen_core.models import (
+    Community,
+    CommunityZone,
     Device,
     Kitchen,
     KitchenMember,
     Membership,
     Order,
-    Society,
-    Tower,
     User,
     utcnow,
 )
@@ -28,8 +28,8 @@ def success(response, status=200):
 
 @pytest.fixture
 def people(session):
-    societies = [
-        Society(
+    communities = [
+        Community(
             name=name, address=name + " Road", city="Pune", postal_code="411001", status="active"
         )
         for name in ("Garden", "Park")
@@ -43,27 +43,35 @@ def people(session):
         )
         for index, name in enumerate(("Owner", "Resident", "Newcomer"), start=1)
     ]
-    session.add_all([*societies, owner, resident, newcomer])
+    session.add_all([*communities, owner, resident, newcomer])
     session.flush()
-    garden, park = societies
-    tower, extra, other = [
-        Tower(society_id=society.id, name=name)
-        for society, name in ((garden, "Tower A"), (garden, "Tower B"), (park, "Tower Z"))
+    garden, park = communities
+    zone, extra, other = [
+        CommunityZone(community_id=community.id, name=name)
+        for community, name in (
+            (garden, "Zone A"),
+            (garden, "Zone B"),
+            (park, "Zone Z"),
+        )
     ]
-    session.add_all([tower, extra, other])
+    session.add_all([zone, extra, other])
     session.flush()
     owner_membership, resident_membership = [
         Membership(
-            society_id=garden.id,
+            community_id=garden.id,
             user_id=user.id,
-            tower_id=tower.id,
-            flat=flat,
+            zone_id=zone.id,
+            address_label=address_label,
             status="active",
         )
-        for user, flat in ((owner, "101"), (resident, "102"))
+        for user, address_label in ((owner, "101"), (resident, "102"))
     ]
     kitchen = Kitchen(
-        society_id=garden.id, tower_id=tower.id, flat="101", name="Home Kitchen", status="approved"
+        community_id=garden.id,
+        zone_id=zone.id,
+        address_label="101",
+        name="Home Kitchen",
+        status="approved",
     )
     session.add_all([owner_membership, resident_membership, kitchen])
     session.flush()
@@ -75,13 +83,13 @@ def people(session):
 def historical_order(session, people, customer):
     ready = utcnow() - timedelta(days=1)
     order = Order(
-        society_id=people["garden"].id,
+        community_id=people["garden"].id,
         kitchen_id=people["kitchen"].id,
         customer_id=customer.id,
         status="completed",
         fulfillment_type="pickup",
-        pickup_address={"tower": "Tower A", "flat": "101"},
-        delivery_address={"tower": "Tower A", "flat": "102"},
+        pickup_address={"zone": "Zone A", "address_label": "101"},
+        delivery_address={"zone": "Zone A", "address_label": "102"},
         available_from=ready,
         available_until=ready + timedelta(hours=1),
         expires_at=ready - timedelta(hours=1),
@@ -163,18 +171,18 @@ def test_account_deactivation_suspends_memberships_kitchen_and_devices_without_l
     assert session.get(Kitchen, people["kitchen"].id).status == "suspended"
 
 
-def test_shared_kitchens_in_multiple_societies_can_deactivate_both_users_concurrently(
+def test_shared_kitchens_in_multiple_communities_can_deactivate_both_users_concurrently(
     session, session_factory, people
 ):
     owner, resident = people["owner"], people["resident"]
-    # The users visit the two societies in opposite membership UUID orders.
+    # The users visit the two communities in opposite membership UUID orders.
     people["owner_membership"].id = UUID(int=101)
     people["resident_membership"].id = UUID(int=104)
     park = people["park"]
     park_kitchen = Kitchen(
-        society_id=park.id,
-        tower_id=people["other"].id,
-        flat="201",
+        community_id=park.id,
+        zone_id=people["other"].id,
+        address_label="201",
         name="Shared Park Kitchen",
         status="approved",
     )
@@ -184,17 +192,17 @@ def test_shared_kitchens_in_multiple_societies_can_deactivate_both_users_concurr
             Membership(
                 id=UUID(int=103),
                 user_id=owner.id,
-                society_id=park.id,
-                tower_id=people["other"].id,
-                flat="201",
+                community_id=park.id,
+                zone_id=people["other"].id,
+                address_label="201",
                 status="active",
             ),
             Membership(
                 id=UUID(int=102),
                 user_id=resident.id,
-                society_id=park.id,
-                tower_id=people["other"].id,
-                flat="202",
+                community_id=park.id,
+                zone_id=people["other"].id,
+                address_label="202",
                 status="active",
             ),
         ]
@@ -226,7 +234,7 @@ def test_shared_kitchens_in_multiple_societies_can_deactivate_both_users_concurr
                     return
                 if (
                     not synchronized_memberships
-                    and "FROM society_memberships" in statement
+                    and "FROM community_memberships" in statement
                     and "FOR UPDATE" in statement
                 ):
                     synchronized_memberships = True
@@ -267,13 +275,13 @@ def test_membership_creation_filters_and_address_changes_preserve_order_snapshot
 ):
     data = {
         "user_id": str(people["newcomer"].id),
-        "society_id": str(people["garden"].id),
-        "tower_id": str(people["tower"].id),
-        "flat": "103",
+        "community_id": str(people["garden"].id),
+        "zone_id": str(people["zone"].id),
+        "address_label": "103",
     }
     assert (
         admin_client.post(
-            "/api/v1/memberships", json={**data, "tower_id": str(people["other"].id)}
+            "/api/v1/memberships", json={**data, "zone_id": str(people["other"].id)}
         ).status_code
         == 422
     )
@@ -292,18 +300,20 @@ def test_membership_creation_filters_and_address_changes_preserve_order_snapshot
             "/api/v1/memberships",
             params={
                 "user_id": data["user_id"],
-                "society_id": data["society_id"],
+                "community_id": data["community_id"],
                 "status": "active",
             },
         )
     )
     assert page["total"] == 1 and page["items"][0]["id"] == membership["id"]
-    assert success(admin_client.get(path))["flat"] == "103"
-    assert admin_client.patch(path, json={"tower_id": str(people["other"].id)}).status_code == 422
+    assert success(admin_client.get(path))["address_label"] == "103"
+    assert admin_client.patch(path, json={"zone_id": str(people["other"].id)}).status_code == 422
     assert (
         success(
-            admin_client.patch(path, json={"tower_id": str(people["extra"].id), "flat": "204"})
-        )["flat"]
+            admin_client.patch(
+                path, json={"zone_id": str(people["extra"].id), "address_label": "204"}
+            )
+        )["address_label"]
         == "204"
     )
     assert success(admin_client.post(path + "/suspend"))["status"] == "suspended"
@@ -314,88 +324,99 @@ def test_membership_creation_filters_and_address_changes_preserve_order_snapshot
     order = historical_order(session, people, people["resident"])
     resident_path = f"/api/v1/memberships/{people['resident_membership'].id}"
     assert (
-        success(admin_client.patch(resident_path, json={"flat": "New flat"}))["flat"] == "New flat"
+        success(admin_client.patch(resident_path, json={"address_label": "New address_label"}))[
+            "address_label"
+        ]
+        == "New address_label"
     )
     assert admin_client.delete(resident_path).status_code == 409
     session.expire_all()
-    assert session.get(Order, order.id).delivery_address["flat"] == "102"
+    assert session.get(Order, order.id).delivery_address["address_label"] == "102"
 
 
-def test_kitchen_member_address_and_membership_cannot_be_removed(admin_client, people):
+def test_kitchen_owner_home_can_change_independently_but_membership_is_retained(
+    admin_client, people
+):
     path = f"/api/v1/memberships/{people['owner_membership'].id}"
-    assert admin_client.patch(path, json={"flat": "Moved"}).status_code == 409
+    assert admin_client.patch(path, json={"address_label": "Moved"}).status_code == 200
+    assert (
+        success(admin_client.get(f"/api/v1/kitchens/{people['kitchen'].id}"))["address_label"]
+        == "101"
+    )
     assert admin_client.delete(path).status_code == 409
     # Idempotent edits do not move a kitchen-managed address.
-    assert success(admin_client.patch(path, json={"flat": "101"}))["flat"] == "101"
+    assert (
+        success(admin_client.patch(path, json={"address_label": "101"}))["address_label"] == "101"
+    )
 
 
-def test_inactive_accounts_and_paused_societies_reject_membership_creation(admin_client, people):
+def test_inactive_accounts_and_paused_communities_reject_membership_creation(admin_client, people):
     data = {
         "user_id": str(people["newcomer"].id),
-        "society_id": str(people["garden"].id),
-        "tower_id": str(people["tower"].id),
-        "flat": "103",
+        "community_id": str(people["garden"].id),
+        "zone_id": str(people["zone"].id),
+        "address_label": "103",
     }
     success(admin_client.post(f"/api/v1/users/{people['newcomer'].id}/deactivate"))
     assert admin_client.post("/api/v1/memberships", json=data).status_code == 409
     success(admin_client.post(f"/api/v1/users/{people['newcomer'].id}/activate"))
-    success(admin_client.post(f"/api/v1/societies/{people['garden'].id}/pause"))
+    success(admin_client.post(f"/api/v1/communities/{people['garden'].id}/pause"))
     assert admin_client.post("/api/v1/memberships", json=data).status_code == 409
 
 
-def test_tower_update_delete_and_last_active_tower_guards(admin_client, people):
+def test_zone_update_delete_and_reference_guards(admin_client, people):
     garden = people["garden"]
-    path = f"/api/v1/towers/{people['extra'].id}"
+    path = f"/api/v1/zones/{people['extra'].id}"
     page = success(
-        admin_client.get(f"/api/v1/societies/{garden.id}/towers", params={"sort": "name"})
+        admin_client.get(f"/api/v1/communities/{garden.id}/zones", params={"sort": "name"})
     )
     assert page["total"] == 2
-    assert success(admin_client.get(path))["name"] == "Tower B"
-    assert admin_client.patch(path, json={"name": "tower a"}).status_code == 409
-    assert success(admin_client.patch(path, json={"name": "Tower C"}))["name"] == "Tower C"
-    assert admin_client.patch(path, json={"society_id": str(people["park"].id)}).status_code == 422
-    assert admin_client.delete(f"/api/v1/towers/{people['tower'].id}").status_code == 409
+    assert success(admin_client.get(path))["name"] == "Zone B"
+    assert admin_client.patch(path, json={"name": "zone a"}).status_code == 409
+    assert success(admin_client.patch(path, json={"name": "Zone C"}))["name"] == "Zone C"
+    assert (
+        admin_client.patch(path, json={"community_id": str(people["park"].id)}).status_code == 422
+    )
+    assert admin_client.delete(f"/api/v1/zones/{people['zone'].id}").status_code == 409
     assert admin_client.delete(path).status_code == 204
     assert admin_client.get(path).status_code == 404
-    other_path = f"/api/v1/towers/{people['other'].id}"
-    assert admin_client.delete(other_path).status_code == 409
-    success(admin_client.post(f"/api/v1/societies/{people['park'].id}/pause"))
+    other_path = f"/api/v1/zones/{people['other'].id}"
     assert admin_client.delete(other_path).status_code == 204
-    assert admin_client.post(f"/api/v1/societies/{people['park'].id}/activate").status_code == 409
+    assert admin_client.post(f"/api/v1/communities/{people['park'].id}/activate").status_code == 200
 
 
-def test_society_can_be_deleted_only_before_people_or_food_use_it(admin_client, session, people):
+def test_community_can_be_deleted_only_before_people_or_food_use_it(admin_client, session, people):
     data = {
-        "name": "Unused society",
+        "name": "Unused community",
         "address": "Empty Road",
         "city": "Pune",
         "postal_code": "411001",
-        "towers": [{"name": "Tower X"}],
+        "zones": [{"name": "Zone X"}],
     }
-    society = success(admin_client.post("/api/v1/societies", json=data), 201)
-    path = f"/api/v1/societies/{society['id']}"
+    community = success(admin_client.post("/api/v1/communities", json=data), 201)
+    path = f"/api/v1/communities/{community['id']}"
     assert (
-        success(admin_client.patch(path, json={"name": "Corrected society"}))["name"]
-        == "Corrected society"
+        success(admin_client.patch(path, json={"name": "Corrected community"}))["name"]
+        == "Corrected community"
     )
     assert admin_client.delete(path).status_code == 204
     assert admin_client.get(path).status_code == 404
-    assert admin_client.delete(f"/api/v1/societies/{people['garden'].id}").status_code == 409
-    assert session.get(Society, people["garden"].id) is not None
+    assert admin_client.delete(f"/api/v1/communities/{people['garden'].id}").status_code == 409
+    assert session.get(Community, people["garden"].id) is not None
 
 
-def test_resident_joins_active_society_immediately_without_admin_approval(
+def test_resident_joins_active_community_immediately_without_admin_approval(
     client, admin_client, people
 ):
     from kitchen_http.auth import require_user
 
     client.app.dependency_overrides[require_user] = lambda: people["newcomer"]
-    society_id = people["garden"].id
-    path = f"/api/v1/societies/{society_id}/join"
-    address = {"tower_id": str(people["tower"].id), "flat": "103"}
+    community_id = people["garden"].id
+    path = f"/api/v1/communities/{community_id}/join"
+    address = {"zone_id": str(people["zone"].id), "address_label": "103"}
     joined = success(client.post(path, json=address), 201)
     assert joined["status"] == "active"
-    assert success(client.get(f"/api/v1/societies/{society_id}/kitchens"))["total"] == 1
+    assert success(client.get(f"/api/v1/communities/{community_id}/kitchens"))["total"] == 1
     # A suspended membership requires explicit administrative restoration.
     membership_path = f"/api/v1/memberships/{joined['id']}"
     assert success(admin_client.post(membership_path + "/suspend"))["status"] == "suspended"
@@ -409,7 +430,7 @@ def test_resident_joins_active_society_immediately_without_admin_approval(
     assert admin_client.get("/api/v1/invitations").status_code == 404
     assert (
         admin_client.post(
-            f"/api/v1/societies/{society_id}/invitations", json={"phone": "+919000000004"}
+            f"/api/v1/communities/{community_id}/invitations", json={"phone": "+919000000004"}
         ).status_code
         == 404
     )

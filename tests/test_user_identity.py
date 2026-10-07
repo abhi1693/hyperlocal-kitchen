@@ -1,7 +1,7 @@
 """Delivery contacts never merge or replace stable Zitadel-backed accounts."""
 
 from kitchen_core.auth import save_user
-from kitchen_core.models import Membership, Society, Tower, User
+from kitchen_core.models import Community, CommunityZone, Membership, User
 from sqlalchemy import func, select
 
 
@@ -11,21 +11,23 @@ def identity(subject, phone):
 
 
 def household(session, first, second):
-    society = Society(
-        name="Shared household society",
-        address="Society Road",
+    community = Community(
+        name="Shared household community",
+        address="Community Road",
         city="Pune",
         postal_code="411001",
         status="active",
     )
-    session.add(society)
+    session.add(community)
     session.flush()
-    tower = Tower(society_id=society.id, name="Tower A")
-    session.add(tower)
+    zone = CommunityZone(community_id=community.id, name="Zone A")
+    session.add(zone)
     session.flush()
     memberships = [
-        Membership(user_id=user.id, society_id=society.id, tower_id=tower.id, flat=flat)
-        for user, flat in ((first, "101"), (second, "202"))
+        Membership(
+            user_id=user.id, community_id=community.id, zone_id=zone.id, address_label=address_label
+        )
+        for user, address_label in ((first, "101"), (second, "202"))
     ]
     session.add_all(memberships)
     session.flush()
@@ -50,7 +52,7 @@ def test_distinct_zitadel_subjects_can_share_a_verified_delivery_contact(session
     assert session.scalar(select(func.count()).select_from(User)) == 2
 
 
-def test_contact_reassignment_keeps_users_and_society_memberships_separate(session):
+def test_contact_reassignment_keeps_users_and_community_memberships_separate(session):
     original_phone, other_phone = "+919876543210", "+919876543211"
     first = save_user(session, identity("first-resident", original_phone))
     second = save_user(session, identity("second-resident", other_phone))

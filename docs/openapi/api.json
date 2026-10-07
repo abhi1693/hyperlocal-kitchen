@@ -1045,13 +1045,13 @@
         }
       }
     },
-    "/api/v1/societies": {
+    "/api/v1/communities": {
       "get": {
         "tags": [
-          "societies and food"
+          "communities and food"
         ],
-        "summary": "Societies",
-        "operationId": "societies_api_v1_societies_get",
+        "summary": "Communities",
+        "operationId": "communities_api_v1_communities_get",
         "security": [
           {
             "APIKeyCookie": []
@@ -1108,7 +1108,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SocietyPage"
+                  "$ref": "#/components/schemas/CommunityPage"
                 }
               }
             }
@@ -1196,13 +1196,13 @@
         }
       }
     },
-    "/api/v1/societies/{society_id}": {
+    "/api/v1/communities/{community_id}": {
       "get": {
         "tags": [
-          "societies and food"
+          "communities and food"
         ],
-        "summary": "Society",
-        "operationId": "society_api_v1_societies__society_id__get",
+        "summary": "Community",
+        "operationId": "community_api_v1_communities__community_id__get",
         "security": [
           {
             "APIKeyCookie": []
@@ -1213,13 +1213,13 @@
         ],
         "parameters": [
           {
-            "name": "society_id",
+            "name": "community_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Society Id"
+              "title": "Community Id"
             }
           }
         ],
@@ -1229,7 +1229,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SocietyOut"
+                  "$ref": "#/components/schemas/CommunityOut"
                 }
               }
             }
@@ -1317,13 +1317,13 @@
         }
       }
     },
-    "/api/v1/societies/{society_id}/towers": {
+    "/api/v1/communities/{community_id}/zones": {
       "get": {
         "tags": [
-          "societies and food"
+          "communities and food"
         ],
-        "summary": "Towers",
-        "operationId": "towers_api_v1_societies__society_id__towers_get",
+        "summary": "Zones",
+        "operationId": "zones_api_v1_communities__community_id__zones_get",
         "security": [
           {
             "APIKeyCookie": []
@@ -1334,13 +1334,13 @@
         ],
         "parameters": [
           {
-            "name": "society_id",
+            "name": "community_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Society Id"
+              "title": "Community Id"
             }
           },
           {
@@ -1375,9 +1375,9 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/TowerOut"
+                    "$ref": "#/components/schemas/CommunityZoneOut"
                   },
-                  "title": "Response Towers Api V1 Societies  Society Id  Towers Get"
+                  "title": "Response Zones Api V1 Communities  Community Id  Zones Get"
                 }
               }
             }
@@ -1465,13 +1465,13 @@
         }
       }
     },
-    "/api/v1/societies/{society_id}/join": {
+    "/api/v1/communities/{community_id}/join": {
       "post": {
         "tags": [
-          "societies and food"
+          "communities and food"
         ],
         "summary": "Join",
-        "operationId": "join_api_v1_societies__society_id__join_post",
+        "operationId": "join_api_v1_communities__community_id__join_post",
         "security": [
           {
             "APIKeyCookie": []
@@ -1482,13 +1482,13 @@
         ],
         "parameters": [
           {
-            "name": "society_id",
+            "name": "community_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Society Id"
+              "title": "Community Id"
             }
           }
         ],
@@ -1596,13 +1596,13 @@
         }
       }
     },
-    "/api/v1/me/societies": {
+    "/api/v1/me/communities": {
       "get": {
         "tags": [
-          "societies and food"
+          "communities and food"
         ],
-        "summary": "My Societies",
-        "operationId": "my_societies_api_v1_me_societies_get",
+        "summary": "My Communities",
+        "operationId": "my_communities_api_v1_me_communities_get",
         "security": [
           {
             "APIKeyCookie": []
@@ -1646,7 +1646,7 @@
                   "items": {
                     "$ref": "#/components/schemas/MembershipOut"
                   },
-                  "title": "Response My Societies Api V1 Me Societies Get"
+                  "title": "Response My Communities Api V1 Me Communities Get"
                 }
               }
             }
@@ -1737,7 +1737,7 @@
     "/api/v1/kitchens": {
       "post": {
         "tags": [
-          "societies and food"
+          "communities and food"
         ],
         "summary": "Create Kitchen",
         "operationId": "create_kitchen_api_v1_kitchens_post",
@@ -1856,7 +1856,7 @@
     "/api/v1/me/kitchens": {
       "get": {
         "tags": [
-          "societies and food"
+          "communities and food"
         ],
         "summary": "Own Kitchens",
         "operationId": "own_kitchens_api_v1_me_kitchens_get",
@@ -1991,13 +1991,13 @@
         }
       }
     },
-    "/api/v1/societies/{society_id}/kitchens": {
+    "/api/v1/communities/{community_id}/kitchens": {
       "get": {
         "tags": [
-          "societies and food"
+          "communities and food"
         ],
         "summary": "Kitchens",
-        "operationId": "kitchens_api_v1_societies__society_id__kitchens_get",
+        "operationId": "kitchens_api_v1_communities__community_id__kitchens_get",
         "security": [
           {
             "APIKeyCookie": []
@@ -2008,13 +2008,13 @@
         ],
         "parameters": [
           {
-            "name": "society_id",
+            "name": "community_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Society Id"
+              "title": "Community Id"
             }
           },
           {
@@ -2155,7 +2155,7 @@
     "/api/v1/kitchens/{kitchen_id}": {
       "get": {
         "tags": [
-          "societies and food"
+          "communities and food"
         ],
         "summary": "Kitchen",
         "operationId": "kitchen_api_v1_kitchens__kitchen_id__get",
@@ -2274,7 +2274,7 @@
       },
       "patch": {
         "tags": [
-          "societies and food"
+          "communities and food"
         ],
         "summary": "Edit Kitchen",
         "operationId": "edit_kitchen_api_v1_kitchens__kitchen_id__patch",
@@ -2405,7 +2405,7 @@
     "/api/v1/kitchens/{kitchen_id}/dishes": {
       "get": {
         "tags": [
-          "societies and food"
+          "communities and food"
         ],
         "summary": "Dishes",
         "operationId": "dishes_api_v1_kitchens__kitchen_id__dishes_get",
@@ -2551,7 +2551,7 @@
       },
       "post": {
         "tags": [
-          "societies and food"
+          "communities and food"
         ],
         "summary": "Add Dish",
         "operationId": "add_dish_api_v1_kitchens__kitchen_id__dishes_post",
@@ -2682,7 +2682,7 @@
     "/api/v1/dishes/{dish_id}": {
       "patch": {
         "tags": [
-          "societies and food"
+          "communities and food"
         ],
         "summary": "Edit Dish",
         "operationId": "edit_dish_api_v1_dishes__dish_id__patch",
@@ -2811,7 +2811,7 @@
       },
       "delete": {
         "tags": [
-          "societies and food"
+          "communities and food"
         ],
         "summary": "Remove Dish",
         "operationId": "remove_dish_api_v1_dishes__dish_id__delete",
@@ -2932,7 +2932,7 @@
     "/api/v1/kitchens/{kitchen_id}/menu-listings": {
       "post": {
         "tags": [
-          "societies and food"
+          "communities and food"
         ],
         "summary": "Publish",
         "operationId": "publish_api_v1_kitchens__kitchen_id__menu_listings_post",
@@ -3061,7 +3061,7 @@
       },
       "get": {
         "tags": [
-          "societies and food"
+          "communities and food"
         ],
         "summary": "Own Menu",
         "operationId": "own_menu_api_v1_kitchens__kitchen_id__menu_listings_get",
@@ -3256,7 +3256,7 @@
     "/api/v1/menu-listings/{listing_id}": {
       "patch": {
         "tags": [
-          "societies and food"
+          "communities and food"
         ],
         "summary": "Edit Listing",
         "operationId": "edit_listing_api_v1_menu_listings__listing_id__patch",
@@ -3385,7 +3385,7 @@
       },
       "delete": {
         "tags": [
-          "societies and food"
+          "communities and food"
         ],
         "summary": "Remove Listing",
         "operationId": "remove_listing_api_v1_menu_listings__listing_id__delete",
@@ -3504,7 +3504,7 @@
       },
       "get": {
         "tags": [
-          "societies and food"
+          "communities and food"
         ],
         "summary": "Listing",
         "operationId": "listing_api_v1_menu_listings__listing_id__get",
@@ -3622,13 +3622,13 @@
         }
       }
     },
-    "/api/v1/societies/{society_id}/menu": {
+    "/api/v1/communities/{community_id}/menu": {
       "get": {
         "tags": [
-          "societies and food"
+          "communities and food"
         ],
-        "summary": "Society Menu",
-        "operationId": "society_menu_api_v1_societies__society_id__menu_get",
+        "summary": "Community Menu",
+        "operationId": "community_menu_api_v1_communities__community_id__menu_get",
         "security": [
           {
             "APIKeyCookie": []
@@ -3639,13 +3639,13 @@
         ],
         "parameters": [
           {
-            "name": "society_id",
+            "name": "community_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "format": "uuid",
-              "title": "Society Id"
+              "title": "Community Id"
             }
           },
           {
@@ -3820,7 +3820,7 @@
     "/api/v1/kitchens/{kitchen_id}/menu": {
       "get": {
         "tags": [
-          "societies and food"
+          "communities and food"
         ],
         "summary": "Kitchen Menu",
         "operationId": "kitchen_menu_api_v1_kitchens__kitchen_id__menu_get",
@@ -3925,6 +3925,657 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ListingPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/communities/{community_id}/pickup-points": {
+      "get": {
+        "tags": [
+          "communities and food"
+        ],
+        "summary": "Community Pickup Points",
+        "operationId": "community_pickup_points_api_v1_communities__community_id__pickup_points_get",
+        "security": [
+          {
+            "APIKeyCookie": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "community_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Community Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PickupPointOut"
+                  },
+                  "title": "Response Community Pickup Points Api V1 Communities  Community Id  Pickup Points Get"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/kitchens/{kitchen_id}/pickup-points": {
+      "get": {
+        "tags": [
+          "communities and food"
+        ],
+        "summary": "Kitchen Pickup Points",
+        "operationId": "kitchen_pickup_points_api_v1_kitchens__kitchen_id__pickup_points_get",
+        "security": [
+          {
+            "APIKeyCookie": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "kitchen_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Kitchen Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PickupPointOut"
+                  },
+                  "title": "Response Kitchen Pickup Points Api V1 Kitchens  Kitchen Id  Pickup Points Get"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "communities and food"
+        ],
+        "summary": "Create Pickup Point",
+        "operationId": "create_pickup_point_api_v1_kitchens__kitchen_id__pickup_points_post",
+        "security": [
+          {
+            "APIKeyCookie": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "kitchen_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Kitchen Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PickupPointCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PickupPointOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/kitchens/{kitchen_id}/pickup-points/{point_id}": {
+      "patch": {
+        "tags": [
+          "communities and food"
+        ],
+        "summary": "Edit Pickup Point",
+        "operationId": "edit_pickup_point_api_v1_kitchens__kitchen_id__pickup_points__point_id__patch",
+        "security": [
+          {
+            "APIKeyCookie": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "kitchen_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Kitchen Id"
+            }
+          },
+          {
+            "name": "point_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Point Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PickupPointUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PickupPointOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/me/memberships/{membership_id}": {
+      "patch": {
+        "tags": [
+          "communities and food"
+        ],
+        "summary": "Edit Home",
+        "operationId": "edit_home_api_v1_me_memberships__membership_id__patch",
+        "security": [
+          {
+            "APIKeyCookie": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "membership_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Membership Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MembershipUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MembershipOut"
                 }
               }
             }
@@ -5519,6 +6170,141 @@
         }
       }
     },
+    "/api/v1/kitchens/{kitchen_id}/fulfillment-groups": {
+      "get": {
+        "tags": [
+          "orders"
+        ],
+        "summary": "Kitchen Fulfillment Groups",
+        "operationId": "kitchen_fulfillment_groups_api_v1_kitchens__kitchen_id__fulfillment_groups_get",
+        "security": [
+          {
+            "APIKeyCookie": []
+          },
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "kitchen_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Kitchen Id"
+            }
+          },
+          {
+            "name": "service_date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "Service Date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FulfillmentGroup"
+                  },
+                  "title": "Response Kitchen Fulfillment Groups Api V1 Kitchens  Kitchen Id  Fulfillment Groups Get"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
     "/api/v1/devices": {
       "post": {
         "tags": [
@@ -6131,12 +6917,24 @@
     "schemas": {
       "AddressSnapshot": {
         "properties": {
-          "society_name": {
+          "version": {
+            "type": "integer",
+            "title": "Version",
+            "default": 2
+          },
+          "community_name": {
             "type": "string",
-            "title": "Society Name"
+            "title": "Community Name"
           },
           "address": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Address"
           },
           "city": {
@@ -6144,26 +6942,65 @@
             "title": "City"
           },
           "postal_code": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Postal Code"
           },
-          "tower_name": {
-            "type": "string",
-            "title": "Tower Name"
+          "zone_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Name"
           },
-          "flat": {
-            "type": "string",
-            "title": "Flat"
+          "address_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address Label"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "instructions": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instructions"
           }
         },
         "type": "object",
         "required": [
-          "society_name",
-          "address",
-          "city",
-          "postal_code",
-          "tower_name",
-          "flat"
+          "community_name",
+          "city"
         ],
         "title": "AddressSnapshot"
       },
@@ -6191,6 +7028,194 @@
           "enabled"
         ],
         "title": "AuthConfig"
+      },
+      "CommunityOut": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "residential_society",
+              "cantonment",
+              "housing_colony",
+              "university",
+              "corporate_campus",
+              "gated_community",
+              "other"
+            ],
+            "title": "Type"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "city": {
+            "type": "string",
+            "title": "City"
+          },
+          "postal_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Postal Code"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "zones": {
+            "items": {
+              "$ref": "#/components/schemas/CommunityZoneOut"
+            },
+            "type": "array",
+            "title": "Zones"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "id",
+          "name",
+          "address",
+          "city",
+          "postal_code",
+          "status",
+          "zones"
+        ],
+        "title": "CommunityOut"
+      },
+      "CommunityPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CommunityOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "CommunityPage"
+      },
+      "CommunityZoneOut": {
+        "properties": {
+          "parent_zone_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Zone Id"
+          },
+          "zone_type": {
+            "type": "string",
+            "enum": [
+              "tower",
+              "area",
+              "hostel",
+              "block",
+              "other"
+            ],
+            "title": "Zone Type",
+            "default": "other"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active",
+            "default": true
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "community_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Community Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "community_id",
+          "name"
+        ],
+        "title": "CommunityZoneOut"
+      },
+      "DeliveryAddress": {
+        "properties": {
+          "zone_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Id"
+          },
+          "address_label": {
+            "type": "string",
+            "maxLength": 250,
+            "minLength": 1,
+            "title": "Address Label"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "address_label"
+        ],
+        "title": "DeliveryAddress"
       },
       "DeviceRequest": {
         "properties": {
@@ -6456,6 +7481,71 @@
         ],
         "title": "FieldIssue"
       },
+      "FulfillmentGroup": {
+        "properties": {
+          "fulfillment_type": {
+            "type": "string",
+            "enum": [
+              "pickup",
+              "delivery"
+            ],
+            "title": "Fulfillment Type"
+          },
+          "pickup_point_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pickup Point Id"
+          },
+          "fulfillment_snapshot": {
+            "$ref": "#/components/schemas/AddressSnapshot"
+          },
+          "available_from": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Available From"
+          },
+          "available_until": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Available Until"
+          },
+          "order_count": {
+            "type": "integer",
+            "title": "Order Count"
+          },
+          "portion_count": {
+            "type": "integer",
+            "title": "Portion Count"
+          },
+          "order_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Order Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "fulfillment_type",
+          "pickup_point_id",
+          "fulfillment_snapshot",
+          "available_from",
+          "available_until",
+          "order_count",
+          "portion_count",
+          "order_ids"
+        ],
+        "title": "FulfillmentGroup"
+      },
       "HealthResponse": {
         "properties": {
           "status": {
@@ -6476,10 +7566,35 @@
       },
       "KitchenCreate": {
         "properties": {
-          "society_id": {
+          "zone_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Id"
+          },
+          "address_label": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 250,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address Label"
+          },
+          "community_id": {
             "type": "string",
             "format": "uuid",
-            "title": "Society Id"
+            "title": "Community Id"
           },
           "name": {
             "type": "string",
@@ -6545,7 +7660,7 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "society_id",
+          "community_id",
           "name"
         ],
         "title": "KitchenCreate"
@@ -6557,10 +7672,10 @@
             "format": "uuid",
             "title": "Id"
           },
-          "society_id": {
+          "community_id": {
             "type": "string",
             "format": "uuid",
-            "title": "Society Id"
+            "title": "Community Id"
           },
           "name": {
             "type": "string",
@@ -6577,9 +7692,16 @@
             ],
             "title": "Description"
           },
-          "tower_name": {
-            "type": "string",
-            "title": "Tower Name"
+          "zone_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Name"
           },
           "pickup_enabled": {
             "type": "boolean",
@@ -6612,10 +7734,9 @@
         "type": "object",
         "required": [
           "id",
-          "society_id",
+          "community_id",
           "name",
           "description",
-          "tower_name",
           "pickup_enabled",
           "delivery_enabled",
           "delivery_fee_paise",
@@ -6631,10 +7752,10 @@
             "format": "uuid",
             "title": "Id"
           },
-          "society_id": {
+          "community_id": {
             "type": "string",
             "format": "uuid",
-            "title": "Society Id"
+            "title": "Community Id"
           },
           "name": {
             "type": "string",
@@ -6651,9 +7772,16 @@
             ],
             "title": "Description"
           },
-          "tower_name": {
-            "type": "string",
-            "title": "Tower Name"
+          "zone_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Name"
           },
           "pickup_enabled": {
             "type": "boolean",
@@ -6682,14 +7810,28 @@
             ],
             "title": "Fssai Number"
           },
-          "tower_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Tower Id"
+          "zone_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Id"
           },
-          "flat": {
-            "type": "string",
-            "title": "Flat"
+          "address_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address Label"
           },
           "upi_id": {
             "anyOf": [
@@ -6706,17 +7848,14 @@
         "type": "object",
         "required": [
           "id",
-          "society_id",
+          "community_id",
           "name",
           "description",
-          "tower_name",
           "pickup_enabled",
           "delivery_enabled",
           "delivery_fee_paise",
           "status",
           "fssai_number",
-          "tower_id",
-          "flat",
           "upi_id"
         ],
         "title": "KitchenOwnOut"
@@ -6754,6 +7893,31 @@
       },
       "KitchenUpdate": {
         "properties": {
+          "zone_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Id"
+          },
+          "address_label": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 250,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address Label"
+          },
           "name": {
             "anyOf": [
               {
@@ -6846,6 +8010,15 @@
       },
       "ListingCreate": {
         "properties": {
+          "pickup_point_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "maxItems": 30,
+            "title": "Pickup Point Ids"
+          },
           "dish_id": {
             "type": "string",
             "format": "uuid",
@@ -6918,6 +8091,13 @@
       },
       "ListingOut": {
         "properties": {
+          "pickup_points": {
+            "items": {
+              "$ref": "#/components/schemas/PickupPointOut"
+            },
+            "type": "array",
+            "title": "Pickup Points"
+          },
           "id": {
             "type": "string",
             "format": "uuid",
@@ -6984,6 +8164,7 @@
         },
         "type": "object",
         "required": [
+          "pickup_points",
           "id",
           "kitchen",
           "dish",
@@ -7035,6 +8216,22 @@
       },
       "ListingUpdate": {
         "properties": {
+          "pickup_point_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "type": "array",
+                "maxItems": 30
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pickup Point Ids"
+          },
           "service_date": {
             "anyOf": [
               {
@@ -7154,24 +8351,34 @@
       },
       "MembershipJoin": {
         "properties": {
-          "tower_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Tower Id"
+          "zone_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Id"
           },
-          "flat": {
-            "type": "string",
-            "maxLength": 50,
-            "minLength": 1,
-            "title": "Flat"
+          "address_label": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 250,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address Label"
           }
         },
         "additionalProperties": false,
         "type": "object",
-        "required": [
-          "tower_id",
-          "flat"
-        ],
         "title": "MembershipJoin"
       },
       "MembershipOut": {
@@ -7181,32 +8388,53 @@
             "format": "uuid",
             "title": "Id"
           },
-          "society_id": {
+          "community_id": {
             "type": "string",
             "format": "uuid",
-            "title": "Society Id"
+            "title": "Community Id"
           },
           "user_id": {
             "type": "string",
             "format": "uuid",
             "title": "User Id"
           },
-          "society_name": {
+          "community_name": {
             "type": "string",
-            "title": "Society Name"
+            "title": "Community Name"
           },
-          "tower_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Tower Id"
+          "zone_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Id"
           },
-          "tower_name": {
-            "type": "string",
-            "title": "Tower Name"
+          "zone_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Name"
           },
-          "flat": {
-            "type": "string",
-            "title": "Flat"
+          "address_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address Label"
           },
           "status": {
             "type": "string",
@@ -7216,15 +8444,44 @@
         "type": "object",
         "required": [
           "id",
-          "society_id",
+          "community_id",
           "user_id",
-          "society_name",
-          "tower_id",
-          "tower_name",
-          "flat",
+          "community_name",
           "status"
         ],
         "title": "MembershipOut"
+      },
+      "MembershipUpdate": {
+        "properties": {
+          "zone_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Id"
+          },
+          "address_label": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 250,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address Label"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "MembershipUpdate"
       },
       "MessageOut": {
         "properties": {
@@ -7383,6 +8640,28 @@
       },
       "OrderCreate": {
         "properties": {
+          "pickup_point_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pickup Point Id"
+          },
+          "delivery_address": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeliveryAddress"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "items": {
             "items": {
               "$ref": "#/components/schemas/OrderItemCreate"
@@ -7519,10 +8798,10 @@
             "type": "integer",
             "title": "Order Number"
           },
-          "society_id": {
+          "community_id": {
             "type": "string",
             "format": "uuid",
-            "title": "Society Id"
+            "title": "Community Id"
           },
           "kitchen_id": {
             "type": "string",
@@ -7630,11 +8909,40 @@
             "format": "date-time",
             "title": "Available Until"
           },
-          "pickup_address": {
+          "pickup_point_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pickup Point Id"
+          },
+          "fulfillment_snapshot": {
             "$ref": "#/components/schemas/AddressSnapshot"
           },
+          "pickup_address": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AddressSnapshot"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "delivery_address": {
-            "$ref": "#/components/schemas/AddressSnapshot"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AddressSnapshot"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "expires_at": {
             "type": "string",
@@ -7663,7 +8971,7 @@
         "required": [
           "id",
           "order_number",
-          "society_id",
+          "community_id",
           "kitchen_id",
           "customer_id",
           "kitchen_name",
@@ -7680,6 +8988,8 @@
           "total_paise",
           "available_from",
           "available_until",
+          "pickup_point_id",
+          "fulfillment_snapshot",
           "pickup_address",
           "delivery_address",
           "expires_at",
@@ -7736,6 +9046,199 @@
         ],
         "title": "OrderReject"
       },
+      "PickupPointCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 150,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "zone_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Id"
+          },
+          "address_label": {
+            "type": "string",
+            "maxLength": 250,
+            "minLength": 1,
+            "title": "Address Label"
+          },
+          "instructions": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instructions"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "address_label"
+        ],
+        "title": "PickupPointCreate"
+      },
+      "PickupPointOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "community_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Community Id"
+          },
+          "kitchen_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kitchen Id"
+          },
+          "zone_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "address_label": {
+            "type": "string",
+            "title": "Address Label"
+          },
+          "instructions": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instructions"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "community_id",
+          "kitchen_id",
+          "zone_id",
+          "name",
+          "address_label",
+          "instructions",
+          "active"
+        ],
+        "title": "PickupPointOut"
+      },
+      "PickupPointUpdate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 150,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "zone_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Id"
+          },
+          "address_label": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 250,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address Label"
+          },
+          "instructions": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instructions"
+          },
+          "active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "PickupPointUpdate"
+      },
       "ProfileUpdate": {
         "properties": {
           "name": {
@@ -7751,109 +9254,6 @@
           "name"
         ],
         "title": "ProfileUpdate"
-      },
-      "SocietyOut": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Id"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "address": {
-            "type": "string",
-            "title": "Address"
-          },
-          "city": {
-            "type": "string",
-            "title": "City"
-          },
-          "postal_code": {
-            "type": "string",
-            "title": "Postal Code"
-          },
-          "status": {
-            "type": "string",
-            "title": "Status"
-          },
-          "towers": {
-            "items": {
-              "$ref": "#/components/schemas/TowerOut"
-            },
-            "type": "array",
-            "title": "Towers"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "name",
-          "address",
-          "city",
-          "postal_code",
-          "status",
-          "towers"
-        ],
-        "title": "SocietyOut"
-      },
-      "SocietyPage": {
-        "properties": {
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/SocietyOut"
-            },
-            "type": "array",
-            "title": "Items"
-          },
-          "total": {
-            "type": "integer",
-            "title": "Total"
-          },
-          "limit": {
-            "type": "integer",
-            "title": "Limit"
-          },
-          "offset": {
-            "type": "integer",
-            "title": "Offset"
-          }
-        },
-        "type": "object",
-        "required": [
-          "items",
-          "total",
-          "limit",
-          "offset"
-        ],
-        "title": "SocietyPage"
-      },
-      "TowerOut": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Id"
-          },
-          "society_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Society Id"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "society_id",
-          "name"
-        ],
-        "title": "TowerOut"
       },
       "UserIdentity": {
         "properties": {

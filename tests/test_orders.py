@@ -6,17 +6,19 @@ from uuid import uuid4
 import pytest
 from kitchen_core.errors import DomainError
 from kitchen_core.models import (
+    Community,
+    CommunityZone,
     Dish,
     Kitchen,
     KitchenMember,
+    ListingPickupPoint,
     Membership,
     MenuListing,
     Notification,
     Order,
     OrderEvent,
     OrderItem,
-    Society,
-    Tower,
+    PickupPoint,
     User,
 )
 from kitchen_core.order_schemas import OrderCreate
@@ -32,19 +34,43 @@ from kitchen_core.orders import (
 from sqlalchemy import event, func, select, text
 
 
+def attach_pickup(session, kitchen, listing):
+    point = session.scalar(select(PickupPoint).where(PickupPoint.kitchen_id == kitchen.id))
+    if point is None:
+        point = PickupPoint(
+            community_id=kitchen.community_id,
+            kitchen_id=kitchen.id,
+            zone_id=kitchen.zone_id,
+            name=kitchen.name,
+            address_label=kitchen.address_label,
+        )
+        session.add(point)
+        session.flush()
+    session.add(
+        ListingPickupPoint(
+            listing_id=listing.id,
+            pickup_point_id=point.id,
+            kitchen_id=kitchen.id,
+            community_id=kitchen.community_id,
+        )
+    )
+    session.flush()
+    return point
+
+
 @pytest.fixture
 def order_seed(session_factory):
     now = datetime.now(UTC)
     with session_factory() as session:
-        society = Society(
-            name="Oak Society",
+        community = Community(
+            name="Oak Community",
             address="Oak Road",
             city="Gurugram",
             postal_code="122001",
             status="active",
         )
-        other_society = Society(
-            name="Other Society",
+        other_community = Community(
+            name="Other Community",
             address="Other Road",
             city="Gurugram",
             postal_code="122001",
@@ -64,18 +90,18 @@ def order_seed(session_factory):
         outsider = User(
             oidc_subject="outsider", oidc_issuer="https://auth.example.test", name="Outsider"
         )
-        session.add_all([society, other_society, owner, customer, customer_two, outsider])
+        session.add_all([community, other_community, owner, customer, customer_two, outsider])
         session.flush()
-        tower = Tower(society_id=society.id, name="Tower B")
-        other_tower = Tower(society_id=other_society.id, name="Tower A")
-        session.add_all([tower, other_tower])
+        zone = CommunityZone(community_id=community.id, name="Zone B")
+        other_zone = CommunityZone(community_id=other_community.id, name="Zone A")
+        session.add_all([zone, other_zone])
         session.flush()
         memberships = [
             Membership(
-                society_id=society.id,
+                community_id=community.id,
                 user_id=user.id,
-                tower_id=tower.id,
-                flat=f"B-{100 + index}",
+                zone_id=zone.id,
+                address_label=f"B-{100 + index}",
                 status="active",
             )
             for index, user in enumerate([owner, customer, customer_two])
@@ -83,18 +109,18 @@ def order_seed(session_factory):
         session.add_all(memberships)
         session.add(
             Membership(
-                society_id=other_society.id,
+                community_id=other_community.id,
                 user_id=outsider.id,
-                tower_id=other_tower.id,
-                flat="A-101",
+                zone_id=other_zone.id,
+                address_label="A-101",
                 status="active",
             )
         )
         kitchen = Kitchen(
-            society_id=society.id,
+            community_id=community.id,
             name="Manisha's Kitchen",
-            tower_id=tower.id,
-            flat="B-100",
+            zone_id=zone.id,
+            address_label="B-100",
             status="approved",
             upi_id="manisha@bank",
         )
@@ -116,9 +142,11 @@ def order_seed(session_factory):
         )
         session.add(listing)
         session.flush()
+        point = attach_pickup(session, kitchen, listing)
         result = {
-            "society": society.id,
-            "tower": tower.id,
+            "pickup_point": point.id,
+            "community": community.id,
+            "zone": zone.id,
             "owner": owner.id,
             "customer": customer.id,
             "customer_two": customer_two.id,
@@ -185,17 +213,18 @@ def test_create_snapshots_and_canonical_idempotency(session_factory, order_seed)
         assert session.scalar(select(func.count()).select_from(Notification)) == 1
         session.get(Dish, seed["dish"]).name = "Changed dish"
         session.get(MenuListing, seed["listing"]).price_paise = 90000
-        session.get(Kitchen, seed["kitchen"]).flat = "B-900"
+        session.get(Kitchen, seed["kitchen"]).address_label = "B-900"
         session.get(Kitchen, seed["kitchen"]).name = "Updated Kitchen"
-        session.get(Membership, seed["membership"]).flat = "B-901"
+        session.get(Membership, seed["membership"]).address_label = "B-901"
         session.get(User, seed["customer"]).name = "Updated Resident"
         session.commit()
     with session_factory() as session:
         detail = get_order(session, session.get(User, seed["customer"]), original.id)
         assert detail.items[0].dish_name == "Rajma Chawal"
         assert detail.total_paise == 30000
-        assert detail.pickup_address.flat == "B-100"
-        assert detail.delivery_address.flat == "B-101"
+        assert detail.pickup_address.address_label == "B-100"
+        assert detail.delivery_address is None
+        assert detail.fulfillment_snapshot.address_label == "B-100"
         assert detail.customer_name == "Updated Resident"
         assert detail.kitchen_name == "Updated Kitchen"
 
@@ -423,6 +452,7 @@ def test_multi_item_failure_rolls_back_every_reservation(
         )
         session.add(second)
         session.flush()
+        attach_pickup(session, session.get(Kitchen, seed["kitchen"]), second)
         second_id = second.id
         session.commit()
     request = OrderCreate(
@@ -503,10 +533,10 @@ def test_kitchen_owners_can_order_from_each_other_without_notification_deadlock(
     with session_factory() as session:
         original = session.get(MenuListing, seed["listing"])
         second_kitchen = Kitchen(
-            society_id=seed["society"],
+            community_id=seed["community"],
             name="Second Kitchen",
-            tower_id=seed["tower"],
-            flat="B-102",
+            zone_id=seed["zone"],
+            address_label="B-102",
             status="approved",
         )
         session.add(second_kitchen)
@@ -527,6 +557,7 @@ def test_kitchen_owners_can_order_from_each_other_without_notification_deadlock(
         )
         session.add(second_listing)
         session.flush()
+        attach_pickup(session, second_kitchen, second_listing)
         second_listing_id = second_listing.id
         session.commit()
 
@@ -580,7 +611,7 @@ def test_new_orders_do_not_notify_managers_without_active_access(
             membership = session.scalar(
                 select(Membership).where(
                     Membership.user_id == seed["customer_two"],
-                    Membership.society_id == seed["society"],
+                    Membership.community_id == seed["community"],
                 )
             )
             membership.status = "suspended"

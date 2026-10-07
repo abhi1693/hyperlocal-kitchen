@@ -1,5 +1,6 @@
 """Resident and kitchen order HTTP endpoints."""
 
+from datetime import date
 from typing import Annotated
 from uuid import UUID
 
@@ -7,7 +8,13 @@ from fastapi import APIRouter, Depends, Header, Query
 from kitchen_core import orders
 from kitchen_core.db import get_session
 from kitchen_core.models import User
-from kitchen_core.order_schemas import OrderCreate, OrderOut, OrderPage, OrderReject
+from kitchen_core.order_schemas import (
+    FulfillmentGroup,
+    OrderCreate,
+    OrderOut,
+    OrderPage,
+    OrderReject,
+)
 from kitchen_http.auth import require_user
 from sqlalchemy.orm import Session
 
@@ -90,3 +97,10 @@ def report_payment(order_id: UUID, session: Database, user: Resident):
 @router.post("/orders/{order_id}/confirm-payment", response_model=OrderOut)
 def confirm_payment(order_id: UUID, session: Database, user: Resident):
     return orders.record_payment(session, user, order_id, "confirm")
+
+
+@router.get("/kitchens/{kitchen_id}/fulfillment-groups", response_model=list[FulfillmentGroup])
+def kitchen_fulfillment_groups(
+    kitchen_id: UUID, service_date: date, session: Database, user: Resident
+):
+    return orders.fulfillment_groups(session, user, kitchen_id, service_date)

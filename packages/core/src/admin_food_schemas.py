@@ -10,7 +10,6 @@ from kitchen_core.catalog_schemas import (
     ListingCreate,
     StrictRequest,
 )
-from pydantic import Field
 
 
 class AdminKitchenCreate(KitchenCreate):
@@ -18,8 +17,7 @@ class AdminKitchenCreate(KitchenCreate):
 
 
 class AdminKitchenUpdate(KitchenUpdate):
-    tower_id: UUID | None = None
-    flat: str | None = Field(default=None, min_length=1, max_length=50)
+    pass
 
 
 class KitchenMemberCreate(StrictRequest):

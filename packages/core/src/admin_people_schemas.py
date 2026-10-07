@@ -3,7 +3,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from kitchen_core.catalog_schemas import StrictRequest
+from kitchen_core.catalog_schemas import StrictRequest, ZoneType
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
@@ -27,25 +27,26 @@ class AdminUserUpdate(StrictRequest):
         return self
 
 
-class TowerUpdate(StrictRequest):
-    name: str = Field(min_length=1, max_length=100)
+class CommunityZoneUpdate(StrictRequest):
+    name: str | None = Field(default=None, min_length=1, max_length=100)
+    parent_zone_id: UUID | None = None
+    zone_type: ZoneType | None = None
+    active: bool | None = None
 
 
 class MembershipCreate(StrictRequest):
     user_id: UUID
-    society_id: UUID
-    tower_id: UUID
-    flat: str = Field(min_length=1, max_length=50)
+    community_id: UUID
+    zone_id: UUID | None = None
+    address_label: str | None = Field(default=None, min_length=1, max_length=250)
 
 
 class MembershipUpdate(StrictRequest):
-    tower_id: UUID | None = None
-    flat: str | None = Field(default=None, min_length=1, max_length=50)
+    zone_id: UUID | None = None
+    address_label: str | None = Field(default=None, min_length=1, max_length=250)
 
     @model_validator(mode="after")
     def provided_address(self):
         if not self.model_fields_set:
-            raise ValueError("Provide a tower or flat to update.")
-        if any(getattr(self, field) is None for field in self.model_fields_set):
-            raise ValueError("Tower and flat cannot be empty.")
+            raise ValueError("Provide a home zone or address to update.")
         return self

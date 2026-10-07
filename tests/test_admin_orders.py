@@ -24,8 +24,8 @@ from kitchen_core.orders import create_order, get_order
 from kitchen_http import auth as http_auth
 from kitchen_http.application import configure_app
 from sqlalchemy import func, select
+from test_orders import attach_pickup, payload, place
 from test_orders import order_seed as order_seed
-from test_orders import payload, place
 
 
 def create_as_admin(client, seed, *, quantity=2, key="admin-order-key", customer=None):
@@ -78,7 +78,7 @@ def test_admin_order_input_cannot_override_server_fields(admin_client, order_see
 
 @pytest.mark.parametrize(
     ("restriction", "expected_status"),
-    [("inactive", 403), ("membership", 403), ("society", 403), ("stock", 409), ("cutoff", 409)],
+    [("inactive", 403), ("membership", 403), ("community", 403), ("stock", 409), ("cutoff", 409)],
 )
 def test_admin_creation_preserves_customer_and_listing_rules(
     admin_client, session_factory, order_seed, restriction, expected_status
@@ -90,7 +90,7 @@ def test_admin_creation_preserves_customer_and_listing_rules(
             session.get(User, customer).is_active = False
         elif restriction == "membership":
             session.get(Membership, seed["membership"]).status = "suspended"
-        elif restriction == "society":
+        elif restriction == "community":
             customer = seed["outsider"]
         elif restriction == "stock":
             session.get(MenuListing, seed["listing"]).quantity_total = 1
@@ -107,16 +107,16 @@ def test_admin_creation_preserves_customer_and_listing_rules(
         assert session.scalar(select(func.count()).select_from(Notification)) == 0
 
 
-def other_society_order(session_factory, seed):
+def other_community_order(session_factory, seed):
     now = datetime.now(UTC)
     with session_factory() as session:
         customer = session.get(User, seed["outsider"])
         membership = session.scalar(select(Membership).where(Membership.user_id == customer.id))
         kitchen = Kitchen(
-            society_id=membership.society_id,
-            tower_id=membership.tower_id,
-            flat=membership.flat,
-            name="Other Society Kitchen",
+            community_id=membership.community_id,
+            zone_id=membership.zone_id,
+            address_label=membership.address_label,
+            name="Other Community Kitchen",
             status="approved",
         )
         session.add(kitchen)
@@ -137,11 +137,12 @@ def other_society_order(session_factory, seed):
         )
         session.add(listing)
         session.flush()
+        attach_pickup(session, kitchen, listing)
         order = create_order(
             session,
             customer,
             OrderCreate(items=[{"menu_listing_id": listing.id, "quantity": 3}]),
-            "other-society-order",
+            "other-community-order",
         )
         session.commit()
         return order
@@ -151,7 +152,7 @@ def test_admin_global_detail_and_sql_filters_do_not_expand_resident_access(
     admin_client, session_factory, order_seed
 ):
     first = place(session_factory, order_seed, quantity=1)
-    other = other_society_order(session_factory, order_seed)
+    other = other_community_order(session_factory, order_seed)
     assert admin_client.get(f"/api/v1/orders/{other.id}").status_code == 200
     with session_factory() as session:
         resident = session.get(User, order_seed["customer"])
@@ -162,10 +163,10 @@ def test_admin_global_detail_and_sql_filters_do_not_expand_resident_access(
     assert admin_client.post(f"/api/v1/orders/{first.id}/report-payment").status_code == 200
     for filters, expected in [
         ({"customer_id": str(other.customer_id)}, other.id),
-        ({"society_id": str(other.society_id)}, other.id),
+        ({"community_id": str(other.community_id)}, other.id),
         ({"kitchen_id": str(first.kitchen_id)}, first.id),
         ({"status": "accepted", "payment_status": "customer_reported"}, first.id),
-        ({"q": "Other Society Kitchen"}, other.id),
+        ({"q": "Other Community Kitchen"}, other.id),
         ({"q": "Outsider"}, other.id),
         ({"q": f"#{first.order_number}"}, first.id),
     ]:
