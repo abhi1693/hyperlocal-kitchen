@@ -14,6 +14,7 @@ from kitchen_core.order_schemas import (
     OrderOut,
     OrderPage,
     OrderReject,
+    PrepSummary,
 )
 from kitchen_http.auth import require_user
 from sqlalchemy.orm import Session
@@ -97,6 +98,16 @@ def report_payment(order_id: UUID, session: Database, user: Resident):
 @router.post("/orders/{order_id}/confirm-payment", response_model=OrderOut)
 def confirm_payment(order_id: UUID, session: Database, user: Resident):
     return orders.record_payment(session, user, order_id, "confirm")
+
+
+@router.get("/kitchens/{kitchen_id}/prep-summary", response_model=PrepSummary)
+def kitchen_prep_summary(
+    kitchen_id: UUID,
+    on: Annotated[date, Query(alias="date")],
+    session: Database,
+    user: Resident,
+):
+    return orders.prep_summary(session, user, kitchen_id, on)
 
 
 @router.get("/kitchens/{kitchen_id}/fulfillment-groups", response_model=list[FulfillmentGroup])

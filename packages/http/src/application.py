@@ -110,7 +110,7 @@ def configure_app(title: str) -> FastAPI:
                 revision = connection.execute(
                     text("SELECT version_num FROM alembic_version")
                 ).scalar()
-            if revision != "0005_communities_pickup":
+            if revision != "0007_kitchen_follows":
                 raise DomainError(
                     503, "migration_required", "Apply the required database migration"
                 )

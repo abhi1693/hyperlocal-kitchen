@@ -4,6 +4,7 @@ from threading import Barrier, Event
 from uuid import uuid4
 
 import pytest
+from kitchen_core import catalog
 from kitchen_core.errors import DomainError
 from kitchen_core.models import (
     Community,
@@ -182,6 +183,80 @@ def transition(session_factory, seed, order_id, action, reason=None):
         result = transition_order(session, session.get(User, seed[actor]), order_id, action, reason)
         session.commit()
         return result
+
+
+@pytest.mark.parametrize("admin", [False, True])
+def test_pause_blocks_only_new_orders(session_factory, order_seed, admin):
+    seed = order_seed
+    original = place(session_factory, seed, key="before-pause")
+    with session_factory() as session:
+        catalog.set_kitchen_accepting_orders(
+            session, seed["owner"], seed["kitchen"], accepting=False, reason="Emergency"
+        )
+        session.commit()
+    with session_factory() as session:
+        user = session.get(User, seed["customer"])
+        replay = create_order(session, user, payload(seed), "before-pause", admin=admin)
+        assert replay.id == original.id
+        with pytest.raises(DomainError) as error:
+            create_order(session, user, payload(seed), "during-pause", admin=admin)
+        assert error.value.status == 409
+        assert error.value.code == "kitchen_not_accepting_orders"
+        assert session.get(MenuListing, seed["listing"]).quantity_reserved == 2
+        assert session.scalar(select(func.count()).select_from(Order)) == 1
+
+    assert transition(session_factory, seed, original.id, "accept").status == "accepted"
+    assert transition(session_factory, seed, original.id, "prepare").status == "preparing"
+    assert transition(session_factory, seed, original.id, "ready").status == "ready"
+    assert transition(session_factory, seed, original.id, "complete").status == "completed"
+    with session_factory() as session:
+        catalog.set_kitchen_accepting_orders(
+            session, seed["owner"], seed["kitchen"], accepting=True
+        )
+        session.commit()
+    assert place(session_factory, seed, key="after-resume").id != original.id
+
+
+def test_checkout_waits_for_pause_and_refreshes_cached_kitchen(session_factory, order_seed):
+    seed = order_seed
+    cached = Event()
+    proceed = Event()
+    checking_kitchen = Event()
+
+    def checkout():
+        with session_factory() as session:
+            session.execute(text("SET LOCAL lock_timeout = '5s'"))
+            kitchen = session.get(Kitchen, seed["kitchen"])
+            assert kitchen.is_accepting_orders is True
+            cached.set()
+            assert proceed.wait(timeout=5)
+
+            def before_execute(conn, cursor, statement, parameters, context, executemany):
+                if "FROM kitchens" in statement and "FOR SHARE" in statement:
+                    checking_kitchen.set()
+
+            event.listen(session.connection(), "before_cursor_execute", before_execute)
+            with pytest.raises(DomainError) as error:
+                create_order(
+                    session, session.get(User, seed["customer"]), payload(seed), "pause-race"
+                )
+            return error.value.code
+
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(checkout)
+        assert cached.wait(timeout=5)
+        with session_factory() as session:
+            catalog.set_kitchen_accepting_orders(
+                session, seed["owner"], seed["kitchen"], accepting=False
+            )
+            proceed.set()
+            assert checking_kitchen.wait(timeout=5)
+            assert not future.done()
+            session.commit()
+        assert future.result(timeout=5) == "kitchen_not_accepting_orders"
+    with session_factory() as session:
+        assert session.get(MenuListing, seed["listing"]).quantity_reserved == 0
+        assert session.scalar(select(func.count()).select_from(Order)) == 0
 
 
 def test_create_snapshots_and_canonical_idempotency(session_factory, order_seed):

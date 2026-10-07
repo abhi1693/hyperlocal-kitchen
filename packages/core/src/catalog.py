@@ -191,6 +191,8 @@ def kitchen_view(session: Session, kitchen: Kitchen, *, private: bool = False):
         delivery_fee_paise=kitchen.delivery_fee_paise,
         status=kitchen.status,
         fssai_number=kitchen.fssai_number,
+        is_accepting_orders=kitchen.is_accepting_orders,
+        pause_reason=kitchen.pause_reason,
     )
     if private:
         return KitchenOwnOut(
@@ -198,6 +200,7 @@ def kitchen_view(session: Session, kitchen: Kitchen, *, private: bool = False):
             zone_id=kitchen.zone_id,
             address_label=kitchen.address_label,
             upi_id=kitchen.upi_id,
+            paused_at=kitchen.paused_at,
         )
     return KitchenOut(**data)
 
@@ -240,6 +243,7 @@ def listing_view(session: Session, listing: MenuListing) -> ListingOut:
             and remaining > 0
             and dish.is_active
             and kitchen.status == "approved"
+            and kitchen.is_accepting_orders
             and community.status == "active"
             and listing.order_cutoff > utcnow()
             and (
@@ -509,6 +513,37 @@ def update_kitchen(
         kitchen.status = "pending"
     for field, value in values.items():
         setattr(kitchen, field, value)
+    session.flush()
+    return kitchen_view(session, kitchen, private=True)
+
+
+def set_kitchen_accepting_orders(
+    session: Session,
+    user_id: UUID,
+    kitchen_id: UUID,
+    *,
+    accepting: bool,
+    reason: str | None = None,
+) -> KitchenOwnOut:
+    _require_kitchen_mutation(session, user_id, kitchen_id)
+    # Serialize pause/resume with checkout's SHARE lock. NO KEY UPDATE remains
+    # compatible with foreign-key inserts referencing the kitchen.
+    kitchen = session.scalar(
+        select(Kitchen)
+        .where(Kitchen.id == kitchen_id)
+        .with_for_update(key_share=True)
+        .execution_options(populate_existing=True)
+    )
+    # Recheck restrictions after waiting for any concurrent kitchen mutation.
+    kitchen = _require_kitchen_mutation(session, user_id, kitchen_id)
+    if accepting:
+        kitchen.paused_at = None
+        kitchen.pause_reason = None
+    else:
+        if kitchen.is_accepting_orders:
+            kitchen.paused_at = utcnow()
+        kitchen.pause_reason = reason or None
+    kitchen.is_accepting_orders = accepting
     session.flush()
     return kitchen_view(session, kitchen, private=True)
 

@@ -42,6 +42,9 @@ from kitchen_core.order_schemas import (
     OrderOut,
     OrderPage,
     PaymentStatus,
+    PrepDishSummary,
+    PrepOrderNote,
+    PrepSummary,
 )
 from kitchen_core.settings import get_settings
 from sqlalchemy import and_, func, select
@@ -345,7 +348,14 @@ def create_order(
         raise DomainError(404, "listing_not_found", "One of these dishes is unavailable.")
     if len({listing.kitchen_id for listing in listings}) != 1:
         raise DomainError(422, "mixed_kitchens", "Place a separate order for each kitchen.")
-    kitchen = session.get(Kitchen, listings[0].kitchen_id)
+    # Hold availability stable through reservation and commit. Refresh any
+    # cached kitchen after waiting for a concurrent pause/resume to commit.
+    kitchen = session.scalar(
+        select(Kitchen)
+        .where(Kitchen.id == listings[0].kitchen_id)
+        .with_for_update(read=True)
+        .execution_options(populate_existing=True)
+    )
     if kitchen is None:
         raise DomainError(404, "kitchen_not_found", "Kitchen not found.")
     community = session.get(Community, kitchen.community_id)
@@ -354,6 +364,12 @@ def create_order(
     membership = _active_membership(session, user.id, kitchen.community_id)
     if kitchen.status != "approved" or community.status != "active":
         raise DomainError(409, "kitchen_unavailable", "This kitchen is not accepting orders.")
+    if not kitchen.is_accepting_orders:
+        raise DomainError(
+            409,
+            "kitchen_not_accepting_orders",
+            "This kitchen is not accepting new orders right now.",
+        )
     if (
         len({(item.service_date, item.available_from, item.available_until) for item in listings})
         != 1
@@ -646,6 +662,67 @@ def record_payment(
     )
     _notify(session, order, recipients, "payment_status")
     return serialize_order(session, order)
+
+
+def prep_summary(
+    session: Session, user: User, kitchen_id: UUID, service_date: date
+) -> PrepSummary:
+    """Compute outstanding portions and customer notes from committed order items."""
+    _kitchen_access(session, user.id, kitchen_id)
+    start = datetime.combine(service_date, time.min, tzinfo=ZoneInfo("Asia/Kolkata"))
+    rows = session.execute(
+        select(
+            MenuListing.dish_id,
+            OrderItem.dish_name,
+            OrderItem.quantity,
+            Order.id,
+            Order.order_number,
+            Order.customer_note,
+        )
+        .select_from(OrderItem)
+        .join(Order, Order.id == OrderItem.order_id)
+        .join(MenuListing, MenuListing.id == OrderItem.menu_listing_id)
+        .where(
+            Order.kitchen_id == kitchen_id,
+            Order.status.in_(["accepted", "preparing", "ready"]),
+            Order.available_from >= start,
+            Order.available_from < start + timedelta(days=1),
+        )
+        .order_by(OrderItem.dish_name, MenuListing.dish_id, Order.order_number, OrderItem.id)
+    )
+    groups: dict[tuple[UUID, str], PrepDishSummary] = {}
+    dish_orders: dict[tuple[UUID, str], set[UUID]] = defaultdict(set)
+    notes: dict[tuple[UUID, str], dict[UUID, PrepOrderNote]] = defaultdict(dict)
+    order_ids: set[UUID] = set()
+    for dish_id, dish_name, quantity, order_id, order_number, customer_note in rows:
+        # Keep the name agreed at checkout even if a reusable dish is renamed.
+        key = (dish_id, dish_name)
+        if key not in groups:
+            groups[key] = PrepDishSummary(
+                dish_id=dish_id, dish_name=dish_name, portion_count=0, order_count=0, notes=[]
+            )
+        groups[key].portion_count += quantity
+        dish_orders[key].add(order_id)
+        order_ids.add(order_id)
+        if customer_note:
+            if order_id not in notes[key]:
+                notes[key][order_id] = PrepOrderNote(
+                    order_id=order_id,
+                    order_number=order_number,
+                    quantity=0,
+                    customer_note=customer_note,
+                )
+            notes[key][order_id].quantity += quantity
+    for key, group in groups.items():
+        group.order_count = len(dish_orders[key])
+        group.notes = list(notes[key].values())
+    return PrepSummary(
+        kitchen_id=kitchen_id,
+        service_date=service_date,
+        items=list(groups.values()),
+        total_portions=sum(group.portion_count for group in groups.values()),
+        order_count=len(order_ids),
+    )
 
 
 def fulfillment_groups(

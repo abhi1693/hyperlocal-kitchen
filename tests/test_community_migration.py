@@ -186,6 +186,9 @@ def test_populated_society_upgrade_preserves_ids_snapshots_stock_and_retry_keys(
             assert session.get(CommunityZone, ids["zone"]).zone_type == "tower"
             assert session.get(Membership, ids["membership"]).address_label == "102"
             assert session.get(Kitchen, ids["kitchen"]).address_label == "101"
+            kitchen = session.get(Kitchen, ids["kitchen"])
+            assert kitchen.is_accepting_orders is True
+            assert kitchen.paused_at is None and kitchen.pause_reason is None
             assert session.get(MenuListing, ids["listing"]).quantity_reserved == 2
             stored = session.get(Order, ids["order"])
             assert stored.pickup_address == pickup and stored.delivery_address == delivery

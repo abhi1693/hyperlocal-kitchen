@@ -258,6 +258,71 @@ an `Idempotency-Key` header, reusing it only for a retry of the same order.
 An order is pending until accepted; customer cancellation is allowed from
 pending or accepted, and only the owning kitchen can advance preparation.
 
+## Pause and resume orders
+
+Kitchen operators can immediately pause new orders with
+`POST /api/v1/kitchens/{id}/pause`, optionally sending
+`{"reason": "Not cooking today"}`. The body may be omitted; reasons are trimmed,
+limited to 500 characters, and empty reasons become null. Use
+`POST /api/v1/kitchens/{id}/resume` with no body to accept orders again.
+Both return the updated kitchen and use the same access rules as kitchen edits:
+the operator needs an active community membership, the community must be active,
+and a suspended kitchen cannot be changed.
+
+New and existing kitchens default to `is_accepting_orders: true`. Pausing sets
+this to false and records `paused_at`; repeated pauses preserve that timestamp
+and replace the reason. Resuming clears the timestamp and reason. A pause lasts
+until resumed and applies to all new orders, including future dated menus.
+It does not change the kitchen's approval status or listing status.
+
+Discovery still shows paused kitchens and their menus, exposing
+`is_accepting_orders` and `pause_reason`; owner responses also include `paused_at`.
+Listings from a paused kitchen have `is_orderable: false`. New checkout returns
+HTTP 409 with code `kitchen_not_accepting_orders`, including admin-created orders.
+Existing orders, stock reservations, payments and fulfillment continue normally;
+retrying the same committed order with its idempotency key still returns that order.
+Concurrent pause and checkout serialize: a checkout already reserving may commit
+before pause returns; subsequent checkout sees the pause.
+
+Apply migration `0006_kitchen_availability` before running the updated services.
+There are no dated schedules or recurring hours in this control.
+
+## Follow kitchens
+
+`POST /api/v1/kitchens/{id}/follow` follows an approved kitchen visible in one of
+the account's active communities. Paused kitchens can still be followed. The body
+is optional; `{"notify_new_menu": true}` opts in to future menu notifications,
+and false opts out. Menu delivery is designed but not implemented yet; see
+[menu notifications](docs/menu-notifications.md).
+
+The response contains `kitchen`, `followed_at` and `notify_new_menu`. Following is
+safe to repeat: it preserves the original timestamp and, when the preference is
+omitted, the current preference. New follows default to alerts off.
+`DELETE /api/v1/kitchens/{id}/follow` returns 204 even if already unfollowed, and
+allows cleanup after membership loss or kitchen suspension.
+
+`GET /api/v1/me/followed-kitchens?limit=30&offset=0` returns a paginated list across
+the account's active communities, newest follows first. Suspended kitchens and
+inactive communities/memberships are hidden without deleting follows; paused
+kitchens remain visible. Apply migration `0007_kitchen_follows` before using the
+updated APIs.
+
+## Preparation summary
+
+Kitchen operators use `GET /api/v1/kitchens/{id}/prep-summary?date=2026-10-08` to
+see outstanding preparation across pickup and delivery. The response contains
+`kitchen_id`, `service_date`, `items`, `total_portions` and distinct `order_count`.
+Each item has `dish_id`, the checkout snapshot's `dish_name`, `portion_count`,
+distinct `order_count`, and `notes` linking customer notes to order IDs/numbers
+and the relevant quantity. The same order's portions for a dish are combined.
+Renamed dish snapshots remain separate rows so historical names are preserved.
+
+Only accepted, preparing and ready orders whose ready window starts on the
+requested Asia/Kolkata date count. Pending, completed, rejected, cancelled and
+expired orders are excluded. An empty day returns an empty list and zero totals.
+The summary reads order items on demand and stores no aggregate. Existing kitchen
+order responses continue to include the full `customer_note`.
+
 ## Pickup and home delivery
 
 A pickup point is a named collection location with an address label, optional

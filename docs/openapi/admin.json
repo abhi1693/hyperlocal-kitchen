@@ -11310,6 +11310,21 @@
               }
             ],
             "title": "Fssai Number"
+          },
+          "is_accepting_orders": {
+            "type": "boolean",
+            "title": "Is Accepting Orders"
+          },
+          "pause_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pause Reason"
           }
         },
         "type": "object",
@@ -11322,7 +11337,9 @@
           "delivery_enabled",
           "delivery_fee_paise",
           "status",
-          "fssai_number"
+          "fssai_number",
+          "is_accepting_orders",
+          "pause_reason"
         ],
         "title": "KitchenOut"
       },
@@ -11391,6 +11408,33 @@
             ],
             "title": "Fssai Number"
           },
+          "is_accepting_orders": {
+            "type": "boolean",
+            "title": "Is Accepting Orders"
+          },
+          "pause_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pause Reason"
+          },
+          "paused_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paused At"
+          },
           "zone_id": {
             "anyOf": [
               {
@@ -11437,6 +11481,9 @@
           "delivery_fee_paise",
           "status",
           "fssai_number",
+          "is_accepting_orders",
+          "pause_reason",
+          "paused_at",
           "upi_id"
         ],
         "title": "KitchenOwnOut"

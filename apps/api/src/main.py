@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from kitchen_api import auth, catalog, notifications, orders, profile
+from kitchen_api import auth, catalog, follows, notifications, orders, profile
 from kitchen_http.application import configure_app
 
 
@@ -8,6 +8,7 @@ def create_app() -> FastAPI:
     for router in (
         auth.router,
         catalog.router,
+        follows.router,
         orders.router,
         notifications.router,
         profile.router,

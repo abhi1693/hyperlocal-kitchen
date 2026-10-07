@@ -157,6 +157,10 @@ class KitchenApprove(StrictRequest):
     fssai_number: str = Field(pattern=r"^\d{14}$")
 
 
+class KitchenPause(StrictRequest):
+    reason: str | None = Field(default=None, max_length=500)
+
+
 class KitchenOut(BaseModel):
     id: UUID
     community_id: UUID
@@ -168,9 +172,12 @@ class KitchenOut(BaseModel):
     delivery_fee_paise: int
     status: str
     fssai_number: str | None
+    is_accepting_orders: bool
+    pause_reason: str | None
 
 
 class KitchenOwnOut(KitchenOut):
+    paused_at: datetime | None
     zone_id: UUID | None = None
     address_label: str | None = None
     upi_id: str | None
@@ -185,6 +192,23 @@ class KitchenPage(BaseModel):
 
 class KitchenAdminPage(BaseModel):
     items: list[KitchenOwnOut]
+    total: int
+    limit: int
+    offset: int
+
+
+class KitchenFollowRequest(StrictRequest):
+    notify_new_menu: bool = Field(default=False, strict=True)
+
+
+class FollowedKitchenOut(BaseModel):
+    kitchen: KitchenOut
+    followed_at: datetime
+    notify_new_menu: bool
+
+
+class FollowedKitchenPage(BaseModel):
+    items: list[FollowedKitchenOut]
     total: int
     limit: int
     offset: int

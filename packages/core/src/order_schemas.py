@@ -1,6 +1,6 @@
 """Request and response contracts for direct-payment food orders."""
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal
 from uuid import UUID
 
@@ -114,3 +114,26 @@ class FulfillmentGroup(BaseModel):
     order_count: int
     portion_count: int
     order_ids: list[UUID]
+
+
+class PrepOrderNote(BaseModel):
+    order_id: UUID
+    order_number: int
+    quantity: int
+    customer_note: str
+
+
+class PrepDishSummary(BaseModel):
+    dish_id: UUID
+    dish_name: str
+    portion_count: int
+    order_count: int
+    notes: list[PrepOrderNote]
+
+
+class PrepSummary(BaseModel):
+    kitchen_id: UUID
+    service_date: date
+    items: list[PrepDishSummary]
+    total_portions: int
+    order_count: int

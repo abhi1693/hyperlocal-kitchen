@@ -204,6 +204,9 @@ class Kitchen(Entity, Base):
     upi_id: Mapped[str | None] = mapped_column(String(150))
     fssai_number: Mapped[str | None] = mapped_column(String(30))
     status: Mapped[str] = mapped_column(String(20), default="pending")
+    is_accepting_orders: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    paused_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    pause_reason: Mapped[str | None] = mapped_column(String(500))
     __table_args__ = (
         CheckConstraint("status IN ('pending','approved','suspended')"),
         CheckConstraint("pickup_enabled OR delivery_enabled"),
@@ -241,6 +244,14 @@ class Kitchen(Entity, Base):
         ),
         passive_deletes="all",
     )
+
+
+class KitchenFollow(Base):
+    __tablename__ = "kitchen_follows"
+    kitchen_id: Mapped[UUID] = mapped_column(ForeignKey("kitchens.id"), primary_key=True)
+    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"), primary_key=True, index=True)
+    notify_new_menu: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
 class KitchenMember(Base):

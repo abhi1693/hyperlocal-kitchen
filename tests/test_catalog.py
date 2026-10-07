@@ -28,6 +28,86 @@ def as_user(client, user):
     client.app.dependency_overrides[require_user] = lambda: user
 
 
+def test_pause_resume_retains_discovery_and_menu(client, market):
+    food = publish(client, market)
+    kitchen_id = market["kitchen"].id
+    path = f"/api/v1/kitchens/{kitchen_id}"
+    initial = client.get(path).json()
+    assert initial["is_accepting_orders"] is True
+    assert initial["pause_reason"] is None
+
+    paused = client.post(path + "/pause", json={"reason": " Not cooking today "})
+    assert paused.status_code == 200
+    paused = paused.json()
+    assert paused["is_accepting_orders"] is False
+    assert paused["pause_reason"] == "Not cooking today"
+    assert paused["paused_at"] is not None
+    again = client.post(path + "/pause", json={"reason": "Emergency"}).json()
+    assert again["paused_at"] == paused["paused_at"]
+    assert again["pause_reason"] == "Emergency"
+
+    as_user(client, market["customer"])
+    public = client.get(path).json()
+    assert public["is_accepting_orders"] is False
+    assert public["pause_reason"] == "Emergency"
+    kitchens = client.get(f"/api/v1/communities/{market['community'].id}/kitchens").json()
+    assert kitchens["items"][0]["is_accepting_orders"] is False
+    listing = client.get(f"/api/v1/menu-listings/{food['id']}").json()
+    assert listing["status"] == "published"
+    assert listing["is_orderable"] is False
+    assert listing["quantity_remaining"] == food["quantity_remaining"]
+    menu = client.get(path + "/menu", params={"date": food["service_date"]}).json()
+    assert menu["total"] == 1 and menu["items"][0]["is_orderable"] is False
+
+    as_user(client, market["owner"])
+    resumed = client.post(path + "/resume")
+    assert resumed.status_code == 200
+    assert resumed.json()["is_accepting_orders"] is True
+    assert resumed.json()["paused_at"] is None and resumed.json()["pause_reason"] is None
+    assert client.post(path + "/resume").json() == resumed.json()
+    assert client.get(f"/api/v1/menu-listings/{food['id']}").json()["is_orderable"] is True
+    assert client.post(path + "/pause").json()["pause_reason"] is None
+    assert client.post(path + "/pause", json={"reason": "   "}).json()["pause_reason"] is None
+
+
+@pytest.mark.parametrize("action", ["pause", "resume"])
+def test_availability_requires_kitchen_access(client, market, action):
+    path = f"/api/v1/kitchens/{market['kitchen'].id}/{action}"
+    for user in (market["customer"], market["outsider"]):
+        as_user(client, user)
+        assert client.post(path).status_code == 403
+    client.app.dependency_overrides.pop(require_user)
+    assert client.post(path).status_code == 401
+
+
+@pytest.mark.parametrize("action", ["pause", "resume"])
+@pytest.mark.parametrize("restriction", ["membership", "community", "kitchen"])
+def test_availability_obeys_operational_restrictions(client, session, market, action, restriction):
+    if restriction == "membership":
+        membership = session.scalar(
+            select(Membership).where(Membership.user_id == market["owner"].id)
+        )
+        membership.status = "suspended"
+    elif restriction == "community":
+        market["community"].status = "paused"
+    else:
+        market["kitchen"].status = "suspended"
+    session.commit()
+    as_user(client, market["owner"])
+    response = client.post(f"/api/v1/kitchens/{market['kitchen'].id}/{action}")
+    assert response.status_code == (409 if restriction == "community" else 403)
+
+
+@pytest.mark.parametrize(
+    "body", [{"reason": "x" * 501}, {"reason": "a\u0000b"}, {"status": "closed"}]
+)
+def test_pause_validates_request(client, market, body):
+    as_user(client, market["owner"])
+    assert (
+        client.post(f"/api/v1/kitchens/{market['kitchen'].id}/pause", json=body).status_code == 422
+    )
+
+
 @pytest.fixture
 def market(session):
     community = Community(
