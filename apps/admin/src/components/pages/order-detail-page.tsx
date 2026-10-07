@@ -1,26 +1,15 @@
 "use client";
 import Link from "next/link";
-import {
-  useAdminOrderGet,
-  adminOrderAccept,
-  adminOrderReject,
-  adminOrderPrepare,
-  adminOrderReady,
-  adminOrderComplete,
-  adminOrderCancel,
-  adminOrderConfirmPayment,
-  adminOrderReportPayment,
-} from "@/lib/api/generated/admin";
+import { RelatedSection, RecordLink } from "@/components/organisms/related-records";
+import { useAdminOrderGet } from "@/lib/api/generated/admin";
 import { money, dateTime } from "@/lib/utils";
 import { PageHeading } from "@/components/molecules/page-heading";
 import { QueryState } from "@/components/molecules/query-state";
 import { StatusBadge } from "@/components/molecules/status-badge";
-import { ActionButton } from "@/components/molecules/action-button";
-import { Field } from "@/components/molecules/field";
-import { Textarea } from "@/components/atoms/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/atoms/card";
 import { DataTable } from "@/components/organisms/data-table";
-import { FormDialog } from "@/components/organisms/form-dialog";
+import { availableOrderActions } from "@/lib/order-actions";
+import { FormLink } from "@/components/molecules/form-link";
 export function OrderDetailPage({ id }: { id: string }) {
   const query = useAdminOrderGet(id, { query: { refetchInterval: 30000 } });
   if (!query.data)
@@ -31,13 +20,13 @@ export function OrderDetailPage({ id }: { id: string }) {
   const address = order.fulfillment_snapshot;
   const next =
     order.status === "pending"
-      ? { label: "Accept", action: () => adminOrderAccept(id) }
+      ? { label: "Accept", action: "accept" }
       : order.status === "accepted"
-        ? { label: "Start preparing", action: () => adminOrderPrepare(id) }
+        ? { label: "Start preparing", action: "prepare" }
         : order.status === "preparing"
-          ? { label: "Mark ready", action: () => adminOrderReady(id) }
+          ? { label: "Mark ready", action: "ready" }
           : order.status === "ready"
-            ? { label: "Complete", action: () => adminOrderComplete(id) }
+            ? { label: "Complete", action: "complete" }
             : null;
   return (
     <>
@@ -47,28 +36,24 @@ export function OrderDetailPage({ id }: { id: string }) {
       <PageHeading
         title={`Order #${order.order_number}`}
         description={`${order.customer_name} · ${order.kitchen_name}`}
-        action={<StatusBadge value={order.status} />}
+        action={
+          <div className="flex flex-wrap gap-2">
+            <StatusBadge value={order.status} />
+            {availableOrderActions(order).length > 0 && (
+              <FormLink href={`/orders/${id}/edit`}>Edit order</FormLink>
+            )}
+          </div>
+        }
       />
       <Card>
         <CardContent className="space-y-4 pt-6">
           <div className="flex flex-wrap gap-2">
-            {next && <ActionButton label={next.label} action={next.action} />}
+            {next && <FormLink href={`/orders/${id}/${next.action}`}>{next.label}</FormLink>}
             {order.status === "pending" && (
-              <FormDialog
-                title="Reject order"
-                submit={(data) => adminOrderReject(id, { reason: String(data.get("reason")) })}
-              >
-                <Field id="reject_reason" label="Reason">
-                  <Textarea id="reject_reason" name="reason" required maxLength={300} />
-                </Field>
-              </FormDialog>
+              <FormLink href={`/orders/${id}/reject`}>Reject order</FormLink>
             )}
             {["pending", "accepted"].includes(order.status) && (
-              <ActionButton
-                label="Cancel order"
-                action={() => adminOrderCancel(id)}
-                description="Cancel this order and release its reserved portions."
-              />
+              <FormLink href={`/orders/${id}/cancel`}>Cancel order</FormLink>
             )}
           </div>
           <p className="text-sm text-muted-foreground">
@@ -157,17 +142,12 @@ export function OrderDetailPage({ id }: { id: string }) {
               {["accepted", "preparing", "ready", "completed"].includes(order.status) && (
                 <>
                   {order.payment_status === "unpaid" && (
-                    <ActionButton
-                      label="Record payment reported"
-                      action={() => adminOrderReportPayment(id)}
-                    />
+                    <FormLink href={`/orders/${id}/report-payment`}>
+                      Record payment reported
+                    </FormLink>
                   )}
                   {order.payment_status !== "kitchen_confirmed" && (
-                    <ActionButton
-                      label="Confirm payment"
-                      description="Acknowledge that the kitchen received this payment. This does not charge the customer."
-                      action={() => adminOrderConfirmPayment(id)}
-                    />
+                    <FormLink href={`/orders/${id}/confirm-payment`}>Confirm payment</FormLink>
                   )}
                 </>
               )}
@@ -198,6 +178,39 @@ export function OrderDetailPage({ id }: { id: string }) {
           </ol>
         </CardContent>
       </Card>
+      <RelatedSection title="Related objects" total={3}>
+        <DataTable
+          rows={[
+            {
+              id: order.customer_id,
+              type: "Customer",
+              name: order.customer_name,
+              href: `/users/${order.customer_id}`,
+            },
+            {
+              id: order.kitchen_id,
+              type: "Kitchen",
+              name: order.kitchen_name,
+              href: `/kitchens/${order.kitchen_id}`,
+            },
+            {
+              id: order.community_id,
+              type: "Community",
+              name: address.community_name ?? "View community",
+              href: `/communities/${order.community_id}`,
+            },
+          ]}
+          rowKey={(row) => row.type}
+          columns={[
+            { key: "type", title: "Relationship", render: (row) => row.type },
+            {
+              key: "name",
+              title: "Record",
+              render: (row) => <RecordLink href={row.href}>{row.name}</RecordLink>,
+            },
+          ]}
+        />
+      </RelatedSection>
     </>
   );
 }

@@ -5,10 +5,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type CommunityOutType = typeof CommunityOutType[keyof typeof CommunityOutType];
+export type CommunityType = typeof CommunityType[keyof typeof CommunityType];
 
 
-export const CommunityOutType = {
+export const CommunityType = {
   residential_society: 'residential_society',
   cantonment: 'cantonment',
   housing_colony: 'housing_colony',

@@ -4,11 +4,11 @@
  * Hyperlocal Kitchen Platform Admin API
  * OpenAPI spec version: 0.1.0
  */
-import type { CommunityCreateType } from './communityCreateType';
+import type { CommunityType } from './communityType';
 import type { CommunityZoneCreate } from './communityZoneCreate';
 
 export interface CommunityCreate {
-  type?: CommunityCreateType;
+  type?: CommunityType;
   /**
      * @minLength 1
      * @maxLength 200

@@ -20,10 +20,12 @@ class AdminUserOut(BaseModel):
 class AdminUserUpdate(StrictRequest):
     name: str | None = Field(default=None, min_length=1, max_length=120)
 
+    phone: str | None = Field(default=None, pattern=r"^\+[1-9]\d{7,14}$")
+
     @model_validator(mode="after")
     def provided_name(self):
-        if "name" not in self.model_fields_set:
-            raise ValueError("Provide the name to update.")
+        if not self.model_fields_set:
+            raise ValueError("Provide a name or contact phone to update.")
         return self
 
 

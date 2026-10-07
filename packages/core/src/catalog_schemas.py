@@ -4,6 +4,7 @@ from datetime import date, datetime
 from typing import Literal
 from uuid import UUID
 
+from kitchen_core.community_types import CommunityType
 from pydantic import (
     AwareDatetime,
     BaseModel,
@@ -27,15 +28,6 @@ class StrictRequest(BaseModel):
         return value
 
 
-CommunityType = Literal[
-    "residential_society",
-    "cantonment",
-    "housing_colony",
-    "university",
-    "corporate_campus",
-    "gated_community",
-    "other",
-]
 ZoneType = Literal["tower", "area", "hostel", "block", "other"]
 
 
@@ -47,7 +39,7 @@ class CommunityZoneCreate(StrictRequest):
 
 
 class CommunityCreate(StrictRequest):
-    type: CommunityType = "residential_society"
+    type: CommunityType = CommunityType.residential_society
     name: str = Field(min_length=1, max_length=200)
     address: str | None = Field(default=None, min_length=1, max_length=500)
     city: str = Field(min_length=1, max_length=100)

@@ -10,6 +10,7 @@ from __future__ import annotations
 from datetime import UTC, date, datetime
 from uuid import UUID, uuid4
 
+from kitchen_core.community_types import CommunityType
 from sqlalchemy import (
     JSON,
     BigInteger,
@@ -79,15 +80,7 @@ class User(Entity, Base):
     )
 
 
-COMMUNITY_TYPES = (
-    "residential_society",
-    "cantonment",
-    "housing_colony",
-    "university",
-    "corporate_campus",
-    "gated_community",
-    "other",
-)
+COMMUNITY_TYPES = tuple(item.slug for item in CommunityType)
 ZONE_TYPES = ("tower", "area", "hostel", "block", "other")
 
 

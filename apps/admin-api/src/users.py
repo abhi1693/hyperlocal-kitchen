@@ -1,14 +1,15 @@
-"""Existing Zitadel-backed accounts; identity creation remains with the provider."""
+"""Application profiles linked to existing Zitadel identities."""
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
 from kitchen_admin_api.dependencies import DB
 from kitchen_admin_api.pagination import Listing, Page, paginate, record
 from kitchen_core import admin_people
 from kitchen_core.admin_people_schemas import AdminUserOut, AdminUserUpdate
+from kitchen_core.errors import DomainError
 from kitchen_core.models import User
-from kitchen_http.auth import require_admin
+from kitchen_http.auth import Admin, require_admin
 from sqlalchemy import or_, select
 
 router = APIRouter(prefix="/users", tags=["admin-users"], dependencies=[Depends(require_admin)])
@@ -54,3 +55,12 @@ def activate_user(user_id: UUID, session: DB):
 )
 def deactivate_user(user_id: UUID, session: DB):
     return admin_people.set_user_active(session, user_id, False)
+
+
+@router.delete("/{user_id}", status_code=204, operation_id="admin_delete_user")
+def delete_user(user_id: UUID, session: DB, admin: Admin):
+    user = record(session, User, user_id)
+    if user.oidc_subject == admin.subject and user.oidc_issuer == admin.issuer:
+        raise DomainError(409, "current_user", "You cannot delete your signed-in account.")
+    admin_people.delete_user(session, user_id)
+    return Response(status_code=204)

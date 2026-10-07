@@ -1239,6 +1239,115 @@
             "description": "Service Unavailable"
           }
         }
+      },
+      "delete": {
+        "tags": [
+          "admin-users"
+        ],
+        "summary": "Delete User",
+        "operationId": "admin_delete_user",
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
       }
     },
     "/api/v1/users/{user_id}/activate": {
@@ -4503,6 +4612,23 @@
                 }
               ],
               "title": "Community Id"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "User Id"
             }
           },
           {
@@ -10779,6 +10905,18 @@
               }
             ],
             "title": "Name"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\+[1-9]\\d{7,14}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
           }
         },
         "additionalProperties": false,
@@ -10813,17 +10951,7 @@
       "CommunityCreate": {
         "properties": {
           "type": {
-            "type": "string",
-            "enum": [
-              "residential_society",
-              "cantonment",
-              "housing_colony",
-              "university",
-              "corporate_campus",
-              "gated_community",
-              "other"
-            ],
-            "title": "Type",
+            "$ref": "#/components/schemas/CommunityType",
             "default": "residential_society"
           },
           "name": {
@@ -10884,17 +11012,7 @@
       "CommunityOut": {
         "properties": {
           "type": {
-            "type": "string",
-            "enum": [
-              "residential_society",
-              "cantonment",
-              "housing_colony",
-              "university",
-              "corporate_campus",
-              "gated_community",
-              "other"
-            ],
-            "title": "Type"
+            "$ref": "#/components/schemas/CommunityType"
           },
           "id": {
             "type": "string",
@@ -10956,27 +11074,60 @@
         ],
         "title": "CommunityOut"
       },
+      "CommunityType": {
+        "type": "string",
+        "enum": [
+          "residential_society",
+          "cantonment",
+          "housing_colony",
+          "university",
+          "corporate_campus",
+          "gated_community",
+          "other"
+        ],
+        "title": "CommunityType",
+        "x-choices": [
+          {
+            "label": "Residential society",
+            "slug": "residential_society"
+          },
+          {
+            "label": "Cantonment",
+            "slug": "cantonment"
+          },
+          {
+            "label": "Housing colony",
+            "slug": "housing_colony"
+          },
+          {
+            "label": "University",
+            "slug": "university"
+          },
+          {
+            "label": "Corporate campus",
+            "slug": "corporate_campus"
+          },
+          {
+            "label": "Gated community",
+            "slug": "gated_community"
+          },
+          {
+            "label": "Other",
+            "slug": "other"
+          }
+        ]
+      },
       "CommunityUpdate": {
         "properties": {
           "type": {
             "anyOf": [
               {
-                "type": "string",
-                "enum": [
-                  "residential_society",
-                  "cantonment",
-                  "housing_colony",
-                  "university",
-                  "corporate_campus",
-                  "gated_community",
-                  "other"
-                ]
+                "$ref": "#/components/schemas/CommunityType"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Type"
+            ]
           },
           "name": {
             "anyOf": [

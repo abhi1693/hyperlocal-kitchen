@@ -1,29 +1,24 @@
 "use client";
 import Link from "next/link";
 import {
+  RelatedOrders,
+  RelatedKitchens,
+  RelatedMemberships,
+} from "@/components/organisms/related-records";
+import { communityTypeLabels } from "@/lib/api/community-type-choices";
+import {
   useAdminGetCommunity,
   useCommunityPickupPointsApiV1CommunitiesCommunityIdPickupPointsGet,
-  adminCreateZone,
   adminUpdateZone,
-  createPickupPointApiV1CommunitiesCommunityIdPickupPointsPost,
   editPickupPointApiV1PickupPointsPointIdPatch,
 } from "@/lib/api/generated/admin";
-import {
-  CommunityZoneCreateZoneType,
-  type CommunityZoneOut,
-  type PickupPointOut,
-} from "@/lib/api/generated/models";
 import { PageHeading } from "@/components/molecules/page-heading";
-import { Field } from "@/components/molecules/field";
 import { QueryState } from "@/components/molecules/query-state";
 import { StatusBadge } from "@/components/molecules/status-badge";
 import { ActionButton } from "@/components/molecules/action-button";
-import { Input } from "@/components/atoms/input";
-import { Select } from "@/components/atoms/select";
-import { Textarea } from "@/components/atoms/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/atoms/card";
 import { DataTable } from "@/components/organisms/data-table";
-import { FormDialog } from "@/components/organisms/form-dialog";
+import { FormLink } from "@/components/molecules/form-link";
 export function CommunityDetailPage({ id }: { id: string }) {
   const query = useAdminGetCommunity(id);
   const points = useCommunityPickupPointsApiV1CommunitiesCommunityIdPickupPointsGet(id);
@@ -32,103 +27,6 @@ export function CommunityDetailPage({ id }: { id: string }) {
       <QueryState pending={query.isPending} error={query.error} retry={() => query.refetch()} />
     );
   const community = query.data;
-  function zoneForm(row?: CommunityZoneOut) {
-    return (
-      <FormDialog
-        title={row ? "Edit zone" : "New zone"}
-        label={row ? "Edit" : "New zone"}
-        submit={(data) => {
-          const payload = {
-            name: String(data.get("name")),
-            zone_type: String(data.get("zone_type")) as CommunityZoneCreateZoneType,
-            parent_zone_id: String(data.get("parent_zone_id") ?? "") || null,
-          };
-          return row ? adminUpdateZone(row.id, payload) : adminCreateZone(id, payload);
-        }}
-      >
-        <Field label="Name" id="zone_name">
-          <Input id="zone_name" name="name" required maxLength={100} defaultValue={row?.name} />
-        </Field>
-        <Field label="Type" id="zone_type">
-          <Select id="zone_type" name="zone_type" defaultValue={row?.zone_type ?? "other"}>
-            {Object.values(CommunityZoneCreateZoneType).map((value) => (
-              <option key={value} value={value}>
-                {value}
-              </option>
-            ))}
-          </Select>
-        </Field>
-        <Field label="Parent zone" id="parent_zone_id">
-          <Select
-            id="parent_zone_id"
-            name="parent_zone_id"
-            defaultValue={row?.parent_zone_id ?? ""}
-          >
-            <option value="">None</option>
-            {community.zones
-              .filter((zone) => zone.id !== row?.id)
-              .map((zone) => (
-                <option key={zone.id} value={zone.id}>
-                  {zone.name}
-                </option>
-              ))}
-          </Select>
-        </Field>
-      </FormDialog>
-    );
-  }
-  function pointForm(row?: PickupPointOut) {
-    return (
-      <FormDialog
-        title={row ? "Edit pickup point" : "New pickup point"}
-        label={row ? "Edit" : "New pickup point"}
-        submit={(data) => {
-          const payload = {
-            name: String(data.get("name")),
-            address_label: String(data.get("address_label")),
-            zone_id: String(data.get("zone_id") ?? "") || null,
-            instructions: String(data.get("instructions") ?? "") || null,
-          };
-          return row
-            ? editPickupPointApiV1PickupPointsPointIdPatch(row.id, payload)
-            : createPickupPointApiV1CommunitiesCommunityIdPickupPointsPost(id, payload);
-        }}
-      >
-        <Field label="Name" id="point_name">
-          <Input id="point_name" name="name" required maxLength={150} defaultValue={row?.name} />
-        </Field>
-        <Field label="Collection address" id="point_address">
-          <Input
-            id="point_address"
-            name="address_label"
-            required
-            maxLength={250}
-            defaultValue={row?.address_label}
-          />
-        </Field>
-        <Field label="Zone" id="point_zone">
-          <Select id="point_zone" name="zone_id" defaultValue={row?.zone_id ?? ""}>
-            <option value="">None</option>
-            {community.zones
-              .filter((zone) => zone.active)
-              .map((zone) => (
-                <option key={zone.id} value={zone.id}>
-                  {zone.name}
-                </option>
-              ))}
-          </Select>
-        </Field>
-        <Field label="Instructions" id="point_instructions">
-          <Textarea
-            id="point_instructions"
-            name="instructions"
-            maxLength={1000}
-            defaultValue={row?.instructions ?? ""}
-          />
-        </Field>
-      </FormDialog>
-    );
-  }
   return (
     <>
       <Link href="/communities" className="text-sm text-muted-foreground hover:underline">
@@ -136,7 +34,7 @@ export function CommunityDetailPage({ id }: { id: string }) {
       </Link>
       <PageHeading
         title={community.name}
-        description={`${community.city} · ${community.type.replaceAll("_", " ")}`}
+        description={`${community.city} · ${communityTypeLabels[community.type]}`}
         action={<StatusBadge value={community.status} />}
       />
       <Card>
@@ -150,8 +48,8 @@ export function CommunityDetailPage({ id }: { id: string }) {
       </Card>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Zones</CardTitle>
-          {zoneForm()}
+          <CardTitle className="text-base">Zones ({community.zones.length})</CardTitle>
+          <FormLink href={`/communities/${id}/zones/new`}>New zone</FormLink>
         </CardHeader>
         <CardContent>
           <DataTable
@@ -176,7 +74,7 @@ export function CommunityDetailPage({ id }: { id: string }) {
                 title: "Actions",
                 render: (row) => (
                   <div className="flex gap-2">
-                    {zoneForm(row)}
+                    <FormLink href={`/communities/${id}/zones/${row.id}/edit`}>Edit</FormLink>
                     <ActionButton
                       label={row.active ? "Deactivate" : "Activate"}
                       action={() => adminUpdateZone(row.id, { active: !row.active })}
@@ -190,8 +88,10 @@ export function CommunityDetailPage({ id }: { id: string }) {
       </Card>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Pickup points</CardTitle>
-          {pointForm()}
+          <CardTitle className="text-base">
+            Pickup points{points.data && ` (${points.data.length})`}
+          </CardTitle>
+          <FormLink href={`/communities/${id}/pickup-points/new`}>New pickup point</FormLink>
         </CardHeader>
         <CardContent>
           <QueryState
@@ -225,7 +125,9 @@ export function CommunityDetailPage({ id }: { id: string }) {
                   title: "Actions",
                   render: (row) => (
                     <div className="flex gap-2">
-                      {pointForm(row)}
+                      <FormLink href={`/communities/${id}/pickup-points/${row.id}/edit`}>
+                        Edit
+                      </FormLink>
                       <ActionButton
                         label={row.active ? "Deactivate" : "Activate"}
                         action={() =>
@@ -242,6 +144,9 @@ export function CommunityDetailPage({ id }: { id: string }) {
           )}
         </CardContent>
       </Card>
+      <RelatedMemberships communityId={id} />
+      <RelatedKitchens filter={{ community_id: id }} />
+      <RelatedOrders filter={{ community_id: id }} />
     </>
   );
 }

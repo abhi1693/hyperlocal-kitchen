@@ -7,4 +7,5 @@
 
 export interface AdminUserUpdate {
   name?: string | null;
+  phone?: string | null;
 }

@@ -290,6 +290,66 @@ def test_admin_requires_exact_role_in_exact_zitadel_organization(oidc_admin_clie
     assert oidc_admin_client.get("/api/v1/auth/me").status_code == 401
 
 
+@pytest.mark.parametrize("first", ["user", "admin"])
+@pytest.mark.parametrize("role", ["platform_admin", "superuser"])
+def test_admin_and_resident_logins_share_one_listed_user(
+    client, oidc_admin_client, provider, session, monkeypatch, first, role
+):
+    monkeypatch.setenv("KITCHEN_ADMIN_REQUIRED_ROLE", role)
+    get_settings.cache_clear()
+    provider.claims[get_settings().oidc_roles_claim] = {role: {"pilot-org": "pilot.test"}}
+    logins = {"user": client, "admin": oidc_admin_client}
+    assert "login_failed" not in complete(logins[first], provider, first).headers["location"]
+    user = session.query(User).filter_by(oidc_subject=provider.subject).one()
+    user_id = str(user.id)
+    # Admin login must preserve the application's existing delivery contact.
+    user.phone = "+919000000001"
+    session.commit()
+    second = "admin" if first == "user" else "user"
+    assert "login_failed" not in complete(logins[second], provider, second).headers["location"]
+    listed = oidc_admin_client.get("/api/v1/users").json()
+    assert listed["total"] == 1
+    assert listed["items"][0]["id"] == user_id
+    assert listed["items"][0]["name"] == "Resident One"
+    assert client.get("/api/v1/auth/me").json()["id"] == user_id
+    if second == "admin":
+        assert listed["items"][0]["phone"] == "+919000000001"
+    else:
+        assert listed["items"][0]["phone"] == "+919876543210"
+
+
+def test_existing_admin_session_registers_missing_application_user(
+    oidc_admin_client, provider, session
+):
+    assert complete(oidc_admin_client, provider, "admin").headers["location"].endswith("/start")
+    session.query(User).filter_by(oidc_subject=provider.subject).delete()
+    session.commit()
+    # Simulate a session issued by the previous admin-only login implementation.
+    listed = oidc_admin_client.get("/api/v1/users").json()
+    assert listed["total"] == 1
+    assert listed["items"][0]["name"] == "Resident One"
+    assert (
+        oidc_admin_client.get("/api/v1/users").json()["items"][0]["id"] == listed["items"][0]["id"]
+    )
+
+
+def test_ungranted_admin_login_does_not_create_user(oidc_admin_client, provider, session):
+    provider.claims[get_settings().oidc_roles_claim] = {"owner": {"pilot-org": "pilot.test"}}
+    assert "login_failed" in complete(oidc_admin_client, provider, "admin").headers["location"]
+    assert session.query(User).count() == 0
+
+
+def test_disabled_user_cannot_keep_admin_access(oidc_admin_client, provider, session):
+    assert complete(oidc_admin_client, provider, "admin").headers["location"].endswith("/start")
+    user = session.query(User).filter_by(oidc_subject=provider.subject).one()
+    user.is_active = False
+    session.commit()
+    assert oidc_admin_client.get("/api/v1/users").status_code == 401
+    assert "login_failed" in complete(oidc_admin_client, provider, "admin").headers["location"]
+    session.refresh(user)
+    assert user.is_active is False
+
+
 def test_conflicting_verified_role_assertions_never_expand_access(oidc_admin_client, provider):
     provider.info[get_settings().oidc_roles_claim] = {"kitchen_owner": {"pilot-org": "pilot.test"}}
     assert "login_failed" in complete(oidc_admin_client, provider, "admin").headers["location"]

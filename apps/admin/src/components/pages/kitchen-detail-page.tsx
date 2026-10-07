@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { RelatedOrders, RelatedSection, RecordLink } from "@/components/organisms/related-records";
 import { useState } from "react";
 import {
   useAdminFoodKitchen,
@@ -7,36 +8,25 @@ import {
   useAdminFoodKitchenDishes,
   useAdminFoodKitchenListings,
   useAdminKitchenPrepSummary,
-  adminFoodApproveKitchen,
   adminFoodSuspendKitchen,
-  adminFoodPauseKitchen,
   adminFoodResumeKitchen,
-  adminFoodUpdateKitchen,
-  adminFoodCreateKitchenMember,
   adminFoodUpdateKitchenMember,
   adminFoodDeleteKitchenMember,
-  adminFoodCreateKitchenDish,
-  adminFoodUpdateDish,
   adminFoodArchiveDish,
   adminFoodRestoreDish,
   adminFoodCancelListing,
 } from "@/lib/api/generated/admin";
-import type { DishOut, KitchenMemberCreateRole } from "@/lib/api/generated/models";
 import { today, money, dateTime } from "@/lib/utils";
 import { PageHeading } from "@/components/molecules/page-heading";
-import { ReferencePicker } from "@/components/molecules/reference-picker";
 import { Pagination } from "@/components/molecules/pagination";
 import { StatusBadge } from "@/components/molecules/status-badge";
 import { QueryState } from "@/components/molecules/query-state";
 import { ActionButton } from "@/components/molecules/action-button";
-import { Field } from "@/components/molecules/field";
 import { Input } from "@/components/atoms/input";
-import { Textarea } from "@/components/atoms/textarea";
-import { Select } from "@/components/atoms/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/atoms/card";
 import { DataTable } from "@/components/organisms/data-table";
-import { FormDialog } from "@/components/organisms/form-dialog";
-import { ListingForm } from "@/components/organisms/listing-form";
+import { FormLink } from "@/components/molecules/form-link";
+
 export function KitchenDetailPage({ id }: { id: string }) {
   const [date, setDate] = useState(today);
   const [memberOffset, setMemberOffset] = useState(0);
@@ -62,46 +52,6 @@ export function KitchenDetailPage({ id }: { id: string }) {
       <QueryState pending={query.isPending} error={query.error} retry={() => query.refetch()} />
     );
   const kitchen = query.data;
-  function dishForm(row?: DishOut) {
-    return (
-      <FormDialog
-        title={row ? "Edit dish" : "New dish"}
-        label={row ? "Edit" : "New dish"}
-        submit={(data) => {
-          const payload = {
-            name: String(data.get("name")),
-            description: String(data.get("description") ?? "") || null,
-            image_url: String(data.get("image_url") ?? "") || null,
-          };
-          return row
-            ? adminFoodUpdateDish(row.id, payload)
-            : adminFoodCreateKitchenDish(id, payload);
-        }}
-      >
-        <Field label="Dish name" id="dish_name">
-          <Input id="dish_name" name="name" required maxLength={150} defaultValue={row?.name} />
-        </Field>
-        <Field label="Description" id="dish_description">
-          <Textarea
-            id="dish_description"
-            name="description"
-            maxLength={1000}
-            defaultValue={row?.description ?? ""}
-          />
-        </Field>
-        <Field label="Photo URL" id="dish_photo">
-          <Input
-            id="dish_photo"
-            name="image_url"
-            type="url"
-            placeholder="https://…"
-            maxLength={2048}
-            defaultValue={row?.image_url ?? ""}
-          />
-        </Field>
-      </FormDialog>
-    );
-  }
   return (
     <>
       <Link href="/kitchens" className="text-sm text-muted-foreground hover:underline">
@@ -120,105 +70,9 @@ export function KitchenDetailPage({ id }: { id: string }) {
       <Card>
         <CardContent className="space-y-4 pt-6">
           <div className="flex flex-wrap gap-2">
-            <FormDialog
-              title="Edit kitchen"
-              label="Edit"
-              submit={(data) =>
-                adminFoodUpdateKitchen(id, {
-                  name: String(data.get("name")),
-                  description: String(data.get("description") ?? "") || null,
-                  address_label: String(data.get("address_label") ?? "") || null,
-                  upi_id: String(data.get("upi_id") ?? "") || null,
-                  pickup_enabled: data.has("pickup_enabled"),
-                  delivery_enabled: data.has("delivery_enabled"),
-                  delivery_fee_paise: Math.round(Number(data.get("delivery_fee")) * 100),
-                })
-              }
-            >
-              <Field label="Name" id="edit_kitchen_name">
-                <Input
-                  id="edit_kitchen_name"
-                  name="name"
-                  required
-                  maxLength={150}
-                  defaultValue={kitchen.name}
-                />
-              </Field>
-              <Field label="Description" id="edit_description">
-                <Textarea
-                  id="edit_description"
-                  name="description"
-                  maxLength={1000}
-                  defaultValue={kitchen.description ?? ""}
-                />
-              </Field>
-              <Field label="Kitchen address" id="edit_address">
-                <Input
-                  id="edit_address"
-                  name="address_label"
-                  maxLength={250}
-                  defaultValue={kitchen.address_label ?? ""}
-                />
-              </Field>
-              <Field label="UPI ID" id="edit_upi">
-                <Input
-                  id="edit_upi"
-                  name="upi_id"
-                  maxLength={150}
-                  defaultValue={kitchen.upi_id ?? ""}
-                />
-              </Field>
-              <div className="flex gap-6">
-                <label className="flex items-center gap-2 text-sm">
-                  <Input
-                    type="checkbox"
-                    name="pickup_enabled"
-                    defaultChecked={kitchen.pickup_enabled}
-                  />
-                  Pickup
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <Input
-                    type="checkbox"
-                    name="delivery_enabled"
-                    defaultChecked={kitchen.delivery_enabled}
-                  />
-                  Delivery
-                </label>
-              </div>
-              <Field label="Delivery fee (₹)" id="edit_delivery_fee">
-                <Input
-                  id="edit_delivery_fee"
-                  name="delivery_fee"
-                  type="number"
-                  min="0"
-                  max="10000"
-                  step="0.01"
-                  defaultValue={kitchen.delivery_fee_paise / 100}
-                />
-              </Field>
-            </FormDialog>
+            <FormLink href={`/kitchens/${id}/edit`}>Edit</FormLink>
             {kitchen.status !== "approved" && (
-              <FormDialog
-                title="Approve kitchen"
-                submit={(data) =>
-                  adminFoodApproveKitchen(id, {
-                    fssai_number: String(data.get("fssai_number")),
-                  })
-                }
-              >
-                <Field label="FSSAI number" id="fssai_number">
-                  <Input
-                    id="fssai_number"
-                    name="fssai_number"
-                    inputMode="numeric"
-                    pattern="[0-9]{14}"
-                    maxLength={14}
-                    required
-                    defaultValue={kitchen.fssai_number ?? ""}
-                  />
-                </Field>
-              </FormDialog>
+              <FormLink href={`/kitchens/${id}/approve`}>Approve kitchen</FormLink>
             )}
             {kitchen.status !== "suspended" && (
               <ActionButton
@@ -228,19 +82,7 @@ export function KitchenDetailPage({ id }: { id: string }) {
               />
             )}
             {kitchen.is_accepting_orders ? (
-              <FormDialog
-                title="Pause orders"
-                description="Existing orders will not be affected."
-                submit={(data) =>
-                  adminFoodPauseKitchen(id, {
-                    reason: String(data.get("reason") ?? "") || null,
-                  })
-                }
-              >
-                <Field label="Reason (optional)" id="pause_reason">
-                  <Textarea id="pause_reason" name="reason" maxLength={500} />
-                </Field>
-              </FormDialog>
+              <FormLink href={`/kitchens/${id}/pause`}>Pause orders</FormLink>
             ) : (
               <ActionButton
                 label="Resume orders"
@@ -349,7 +191,7 @@ export function KitchenDetailPage({ id }: { id: string }) {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base">Menu for {date}</CardTitle>
-          <ListingForm kitchen={kitchen} />
+          <FormLink href={`/kitchens/${id}/listings/new?date=${date}`}>Publish listing</FormLink>
         </CardHeader>
         <CardContent className="space-y-4">
           <QueryState
@@ -415,8 +257,10 @@ export function KitchenDetailPage({ id }: { id: string }) {
       </Card>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Reusable dishes</CardTitle>
-          {dishForm()}
+          <CardTitle className="text-base">
+            Reusable dishes{dishes.data && ` (${dishes.data.total})`}
+          </CardTitle>
+          <FormLink href={`/kitchens/${id}/dishes/new`}>New dish</FormLink>
         </CardHeader>
         <CardContent className="space-y-4">
           <QueryState
@@ -441,8 +285,14 @@ export function KitchenDetailPage({ id }: { id: string }) {
                     title: "Actions",
                     render: (row) => (
                       <div className="flex flex-wrap gap-2">
-                        {row.is_active && <ListingForm kitchen={kitchen} dish={row} />}
-                        {dishForm(row)}
+                        {row.is_active && (
+                          <FormLink
+                            href={`/kitchens/${id}/listings/new?dish_id=${row.id}&date=${date}`}
+                          >
+                            Cook again
+                          </FormLink>
+                        )}
+                        <FormLink href={`/kitchens/${id}/dishes/${row.id}/edit`}>Edit</FormLink>
                         <ActionButton
                           label={row.is_active ? "Archive" : "Restore"}
                           action={() =>
@@ -463,29 +313,10 @@ export function KitchenDetailPage({ id }: { id: string }) {
       </Card>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Kitchen operators</CardTitle>
-          <FormDialog
-            title="Add operator"
-            submit={(data) =>
-              adminFoodCreateKitchenMember(id, {
-                user_id: String(data.get("user_id")),
-                role: String(data.get("role")) as KitchenMemberCreateRole,
-              })
-            }
-          >
-            <ReferencePicker
-              kind="user"
-              name="user_id"
-              label="Resident"
-              communityId={kitchen.community_id}
-            />
-            <Field label="Role" id="operator_role">
-              <Select id="operator_role" name="role">
-                <option value="manager">Manager</option>
-                <option value="owner">Owner</option>
-              </Select>
-            </Field>
-          </FormDialog>
+          <CardTitle className="text-base">
+            Kitchen operators{members.data && ` (${members.data.total})`}
+          </CardTitle>
+          <FormLink href={`/kitchens/${id}/operators/new`}>Add operator</FormLink>
         </CardHeader>
         <CardContent className="space-y-4">
           <QueryState
@@ -502,7 +333,11 @@ export function KitchenDetailPage({ id }: { id: string }) {
                   {
                     key: "name",
                     title: "Operator",
-                    render: (row) => row.user_name ?? "Unnamed user",
+                    render: (row) => (
+                      <RecordLink href={`/users/${row.user_id}`}>
+                        {row.user_name ?? "Unnamed user"}
+                      </RecordLink>
+                    ),
                   },
                   {
                     key: "role",
@@ -541,6 +376,24 @@ export function KitchenDetailPage({ id }: { id: string }) {
           )}
         </CardContent>
       </Card>
+      <RelatedSection title="Community" total={1}>
+        <DataTable
+          rows={[kitchen]}
+          rowKey={(row) => row.community_id}
+          columns={[
+            {
+              key: "community",
+              title: "Community",
+              render: (row) => (
+                <RecordLink href={`/communities/${row.community_id}`}>
+                  {row.community_name}
+                </RecordLink>
+              ),
+            },
+          ]}
+        />
+      </RelatedSection>
+      <RelatedOrders filter={{ kitchen_id: id }} />
     </>
   );
 }

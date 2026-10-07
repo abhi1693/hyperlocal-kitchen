@@ -4,13 +4,14 @@ from typing import Annotated, cast
 
 from fastapi import Depends, Request, Security
 from fastapi.security import APIKeyCookie, HTTPAuthorizationCredentials, HTTPBearer
-from kitchen_core import auth
+from kitchen_core import auth, oidc
 from kitchen_core.auth_schemas import AdminPrincipal, ResidentSession
 from kitchen_core.db import get_session
 from kitchen_core.errors import DomainError
 from kitchen_core.models import User
 from kitchen_core.settings import get_settings
 from redis.exceptions import RedisError
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 DB = Annotated[Session, Depends(get_session, scope="function")]
@@ -79,6 +80,7 @@ def require_user(
 
 def require_admin(
     request: Request,
+    session: DB,
     _cookie: Annotated[str | None, Security(admin_cookie)] = None,
 ) -> AdminPrincipal:
     token, _ = request_token(request, "admin")
@@ -91,6 +93,15 @@ def require_admin(
         raise DomainError(403, "admin_role_required", "Platform administrator access required")
     if request.method not in {"GET", "HEAD", "OPTIONS"}:
         validate_csrf(request, "admin", record)
+    # Materialize accounts for admin sessions created before shared registration.
+    user = session.scalar(select(User).where(User.oidc_subject == admin.subject))
+    if user is None:
+        try:
+            user = auth.save_user(session, record, update_contact=False)
+        except oidc.OIDCError as exc:
+            raise DomainError(401, "invalid_session", "Administrator sign-in required") from exc
+    if not user.is_active or user.oidc_issuer != admin.issuer:
+        raise DomainError(401, "invalid_session", "Administrator sign-in required")
     return admin
 
 

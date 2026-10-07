@@ -4,11 +4,11 @@
  * Hyperlocal Kitchen Platform Admin API
  * OpenAPI spec version: 0.1.0
  */
-import type { CommunityOutType } from './communityOutType';
+import type { CommunityType } from './communityType';
 import type { CommunityZoneOut } from './communityZoneOut';
 
 export interface CommunityOut {
-  type: CommunityOutType;
+  type: CommunityType;
   id: string;
   name: string;
   address: string | null;

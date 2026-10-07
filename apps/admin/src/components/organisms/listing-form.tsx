@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   useAdminFoodKitchenDishes,
   useAdminGetCommunity,
@@ -11,15 +11,28 @@ import { today } from "@/lib/utils";
 import { Field } from "@/components/molecules/field";
 import { QueryState } from "@/components/molecules/query-state";
 import { Input } from "@/components/atoms/input";
-import { Select } from "@/components/atoms/select";
+import { Combobox } from "@/components/molecules/combobox";
 import { Button } from "@/components/atoms/button";
-import { FormDialog } from "./form-dialog";
-export function ListingForm({ kitchen, dish }: { kitchen: KitchenOwnOut; dish?: DishOut }) {
+import { ResourceForm } from "./resource-form";
+export function ListingForm({
+  kitchen,
+  dish,
+  date,
+}: {
+  kitchen: KitchenOwnOut;
+  dish?: DishOut;
+  date?: string;
+}) {
   const [search, setSearch] = useState("");
   const [offset, setOffset] = useState(0);
+  const [q, setQ] = useState("");
+  useEffect(() => {
+    const timer = setTimeout(() => setQ(search), 250);
+    return () => clearTimeout(timer);
+  }, [search]);
   const dishes = useAdminFoodKitchenDishes(kitchen.id, {
     is_active: true,
-    q: search,
+    q,
     limit: 30,
     offset,
   });
@@ -36,9 +49,10 @@ export function ListingForm({ kitchen, dish }: { kitchen: KitchenOwnOut; dish?: 
           community.data?.zones.some((zone) => zone.id === point.zone_id && zone.active)),
     ) ?? [];
   return (
-    <FormDialog
+    <ResourceForm
+      create
+      cancelHref={`/kitchens/${kitchen.id}`}
       title={dish ? `Cook again: ${dish.name}` : "Publish a listing"}
-      label={dish ? "Cook again" : "Publish listing"}
       description="All dates and times use India time (IST)."
       submit={(data) => {
         const date = String(data.get("service_date"));
@@ -61,54 +75,54 @@ export function ListingForm({ kitchen, dish }: { kitchen: KitchenOwnOut; dish?: 
     >
       {!dish && (
         <Field id="dish_id" label="Dish">
-          <Input
-            aria-label="Search dishes"
-            placeholder="Search dishes…"
-            value={search}
-            onChange={(event) => {
-              setSearch(event.target.value);
-              setOffset(0);
-            }}
-          />
-          <Select
+          <Combobox
+            label="Dish"
             id="dish_id"
             name="dish_id"
             required
-            disabled={dishes.isPending || !!dishes.error}
+            search={search}
+            onSearchChange={(next) => {
+              setSearch(next);
+              setOffset(0);
+            }}
+            loading={dishes.isFetching || search !== q}
+            error={dishes.error?.message}
+            onRetry={() => dishes.refetch()}
             defaultValue=""
-          >
-            <option value="">Select dish…</option>
-            {dishes.data?.items.map((row) => (
-              <option key={row.id} value={row.id}>
-                {row.name}
-              </option>
-            ))}
-          </Select>
-          <QueryState pending={false} error={dishes.error} retry={() => dishes.refetch()} />
-          {(dishes.data?.total ?? 0) > 30 && (
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant="ghost"
-                disabled={offset === 0}
-                onClick={() => setOffset(Math.max(0, offset - 30))}
-              >
-                Previous
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                disabled={offset + 30 >= dishes.data!.total}
-                onClick={() => setOffset(offset + 30)}
-              >
-                Next
-              </Button>
-            </div>
-          )}
+            options={dishes.data?.items.map((row) => ({ value: row.id, label: row.name })) ?? []}
+            footer={
+              (dishes.data?.total ?? 0) > 30 && (
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={offset === 0}
+                    onClick={() => setOffset(Math.max(0, offset - 30))}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={offset + 30 >= dishes.data!.total}
+                    onClick={() => setOffset(offset + 30)}
+                  >
+                    Next
+                  </Button>
+                </div>
+              )
+            }
+          />
         </Field>
       )}
       <Field id="service_date" label="Service date">
-        <Input id="service_date" name="service_date" type="date" required defaultValue={today()} />
+        <Input
+          id="service_date"
+          name="service_date"
+          type="date"
+          required
+          defaultValue={date ?? today()}
+        />
       </Field>
       <div className="grid grid-cols-2 gap-4">
         <Field id="quantity" label="Portions">
@@ -140,7 +154,7 @@ export function ListingForm({ kitchen, dish }: { kitchen: KitchenOwnOut; dish?: 
           name="order_cutoff"
           type="datetime-local"
           required
-          defaultValue={`${today()}T11:30`}
+          defaultValue={`${date ?? today()}T11:30`}
         />
       </Field>
       <div className="grid grid-cols-2 gap-4">
@@ -194,6 +208,6 @@ export function ListingForm({ kitchen, dish }: { kitchen: KitchenOwnOut; dish?: 
           ))}
         </div>
       )}
-    </FormDialog>
+    </ResourceForm>
   );
 }

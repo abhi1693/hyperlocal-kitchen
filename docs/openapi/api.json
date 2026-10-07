@@ -7799,17 +7799,7 @@
       "CommunityOut": {
         "properties": {
           "type": {
-            "type": "string",
-            "enum": [
-              "residential_society",
-              "cantonment",
-              "housing_colony",
-              "university",
-              "corporate_campus",
-              "gated_community",
-              "other"
-            ],
-            "title": "Type"
+            "$ref": "#/components/schemas/CommunityType"
           },
           "id": {
             "type": "string",
@@ -7901,6 +7891,49 @@
           "offset"
         ],
         "title": "CommunityPage"
+      },
+      "CommunityType": {
+        "type": "string",
+        "enum": [
+          "residential_society",
+          "cantonment",
+          "housing_colony",
+          "university",
+          "corporate_campus",
+          "gated_community",
+          "other"
+        ],
+        "title": "CommunityType",
+        "x-choices": [
+          {
+            "label": "Residential society",
+            "slug": "residential_society"
+          },
+          {
+            "label": "Cantonment",
+            "slug": "cantonment"
+          },
+          {
+            "label": "Housing colony",
+            "slug": "housing_colony"
+          },
+          {
+            "label": "University",
+            "slug": "university"
+          },
+          {
+            "label": "Corporate campus",
+            "slug": "corporate_campus"
+          },
+          {
+            "label": "Gated community",
+            "slug": "gated_community"
+          },
+          {
+            "label": "Other",
+            "slug": "other"
+          }
+        ]
       },
       "CommunityZoneOut": {
         "properties": {

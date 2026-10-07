@@ -72,5 +72,54 @@ controls and payment acknowledgement. Operational changes use ordinary
 confirmation dialogs. Order data refreshes periodically while the page is visible.
 
 Menu notification delivery, ratings, and reordering remain outside this slice.
-Tests, type checks, lint, production builds and browser validation were deferred
-at the user's request; this is implementation work, not a verified deployment.
+The dedicated form routes are checked with a production build and browser
+journeys against an isolated API fixture, covering save/cancel navigation,
+validation, reloads, CSRF forwarding and responsive layouts.
+
+## Create and edit pages
+
+Forms use dedicated URLs, following DevFeed's admin pattern. List and detail
+screens link to `/new` and `/edit` pages; zones, pickup points, dishes, listings
+and operators sit under their parent community or kitchen. Approval, order
+pausing and rejection also have their own form pages. Save returns to the
+record or parent screen, Cancel leaves without saving, and create forms offer
+“Create and add another”. Reloading an edit URL loads the current record from
+the API. Validation errors keep the entered values on the page.
+
+
+## Searchable choices
+
+`Combobox` is the shared searchable control for enum choices, list filters and
+API record pickers. Search runs locally for fixed choices and uses debounced API
+queries for communities, users, zones and dishes. Keyboard selection, native
+required validation and FormData preserve the underlying slugs/IDs. Record
+pickers retain selected labels across search and pagination, and display loading,
+empty and retry states inside the dropdown. Community filtering applies directly
+without a dialog.
+
+
+## User administration
+
+`/users` links to `/users/[id]` profile pages with contact information, account
+status, joined date and paginated community memberships. Dedicated `/edit`,
+`/activate` and `/deactivate` pages return to that profile after saving. Membership
+management links carry both `community_id` and `user_id` to keep the list scoped
+to the selected user. Name and contact phone edits use the admin API. A dedicated `/delete` page removes
+unused application profiles; linked records and the signed-in account are protected.
+Zitadel accounts remain unchanged. Account creation remains with Zitadel sign-in,
+and deactivation retains orders and history.
+
+
+## Order administration
+
+`/orders/new` creates an order on behalf of an active community member using
+published, available dishes from one kitchen and ready window. The basket supports
+quantities, pickup points shared by its dishes, home-delivery addresses, notes
+and an estimated total. The API determines final prices and reserves inventory.
+Identical retries reuse an idempotency key; a changed payload gets a new key.
+
+Order detail screens link to `/edit` and dedicated lifecycle/payment pages.
+Available edits follow the existing order state machine: accept, reject with a
+reason, prepare, mark ready, complete, cancel, report payment and confirm payment.
+Cancellation releases inventory while retaining order history. Completed items,
+prices and fulfillment snapshots are not arbitrarily rewritten or deleted.

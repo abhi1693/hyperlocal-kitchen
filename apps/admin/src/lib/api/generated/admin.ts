@@ -1105,6 +1105,80 @@ export const useAdminUpdateUser = <TError = ErrorType<ErrorResponse>,
       return useMutation(getAdminUpdateUserMutationOptions(options), queryClient);
     }
 
+export const getAdminDeleteUserUrl = (userId: string,) => {
+
+
+
+
+  return `/api/v1/users/${userId}`
+}
+
+/**
+ * @summary Delete User
+ */
+export const adminDeleteUser = async (userId: string, options?: Parameters<typeof adminFetch>[1]): Promise<void> => {
+
+  return adminFetch<void>(getAdminDeleteUserUrl(userId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminDeleteUserMutationKey = () => ['adminDeleteUser'] as const;
+
+export const getAdminDeleteUserMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminDeleteUser>>, TError,AdminDeleteUserMutationVariables, TContext>, request?: SecondParameter<typeof adminFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminDeleteUser>>, TError,AdminDeleteUserMutationVariables, TContext> => {
+
+const mutationKey = getAdminDeleteUserMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminDeleteUser>>, AdminDeleteUserMutationVariables> = (props) => {
+          const {userId} = props ?? {};
+
+          return  adminDeleteUser(userId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminDeleteUserMutationResult = NonNullable<Awaited<ReturnType<typeof adminDeleteUser>>>
+
+    export type AdminDeleteUserMutationError = ErrorType<ErrorResponse>
+    export type AdminDeleteUserMutationVariables = {userId: string}
+
+    /**
+ * @summary Delete User
+ */
+export const useAdminDeleteUser = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminDeleteUser>>, TError,AdminDeleteUserMutationVariables, TContext>, request?: SecondParameter<typeof adminFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof adminDeleteUser>>,
+        TError,
+        AdminDeleteUserMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAdminDeleteUserMutationOptions(options), queryClient);
+    }
+
 export const getAdminActivateUserUrl = (userId: string,) => {
 
 

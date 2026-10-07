@@ -1,23 +1,16 @@
 "use client";
+import Link from "next/link";
 import { useState } from "react";
-import {
-  useAdminListUsers,
-  adminUpdateUser,
-  adminActivateUser,
-  adminDeactivateUser,
-} from "@/lib/api/generated/admin";
+import { useAdminListUsers } from "@/lib/api/generated/admin";
 import { useListControls } from "@/lib/use-list-controls";
 import { PageHeading } from "@/components/molecules/page-heading";
 import { ListToolbar } from "@/components/molecules/list-toolbar";
 import { Pagination } from "@/components/molecules/pagination";
 import { StatusBadge } from "@/components/molecules/status-badge";
 import { QueryState } from "@/components/molecules/query-state";
-import { ActionButton } from "@/components/molecules/action-button";
-import { Field } from "@/components/molecules/field";
-import { Input } from "@/components/atoms/input";
-import { Select } from "@/components/atoms/select";
+import { Combobox } from "@/components/molecules/combobox";
 import { DataTable } from "@/components/organisms/data-table";
-import { FormDialog } from "@/components/organisms/form-dialog";
+import { FormLink } from "@/components/molecules/form-link";
 export function UsersPage() {
   const controls = useListControls();
   const [active, setActive] = useState("");
@@ -30,22 +23,24 @@ export function UsersPage() {
     <>
       <PageHeading
         title="Users"
-        description="Manage existing accounts. New users join through sign-in."
+        description="View profiles, edit contact details and manage account access."
       />
       <ListToolbar search={controls.search} onSearch={controls.onSearch}>
-        <Select
+        <Combobox
+          label="Account status"
           aria-label="Account status"
           className="w-auto"
           value={active}
-          onChange={(event) => {
-            setActive(event.target.value);
+          onValueChange={(value) => {
+            setActive(value);
             controls.setOffset(0);
           }}
-        >
-          <option value="">All accounts</option>
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
-        </Select>
+          options={[
+            { value: "", label: "All accounts" },
+            { value: "active", label: "Active" },
+            { value: "inactive", label: "Inactive" },
+          ]}
+        />
       </ListToolbar>
       <QueryState pending={query.isPending} error={query.error} retry={() => query.refetch()} />
       {query.data && (
@@ -57,7 +52,11 @@ export function UsersPage() {
               {
                 key: "name",
                 title: "Name",
-                render: (row) => row.name ?? "Unnamed user",
+                render: (row) => (
+                  <Link href={`/users/${row.id}`} className="font-medium hover:underline">
+                    {row.name ?? "Unnamed user"}
+                  </Link>
+                ),
               },
               {
                 key: "phone",
@@ -74,35 +73,13 @@ export function UsersPage() {
                 title: "Actions",
                 render: (row) => (
                   <div className="flex gap-2">
-                    <FormDialog
-                      title="Edit user"
-                      label="Edit"
-                      submit={(data) =>
-                        adminUpdateUser(row.id, {
-                          name: String(data.get("name")) || null,
-                        })
-                      }
+                    <FormLink href={`/users/${row.id}/edit`}>Edit</FormLink>
+                    <FormLink href={`/users/${row.id}/delete`}>Delete</FormLink>
+                    <FormLink
+                      href={`/users/${row.id}/${row.is_active ? "deactivate" : "activate"}`}
                     >
-                      <Field label="Name" id="user_name">
-                        <Input
-                          id="user_name"
-                          name="name"
-                          maxLength={120}
-                          defaultValue={row.name ?? ""}
-                        />
-                      </Field>
-                    </FormDialog>
-                    <ActionButton
-                      label={row.is_active ? "Deactivate" : "Activate"}
-                      description={
-                        row.is_active
-                          ? "Disable this account and its memberships. A kitchen that loses its last active owner will be suspended."
-                          : "Reactivate this account. Community memberships must be restored separately."
-                      }
-                      action={() =>
-                        row.is_active ? adminDeactivateUser(row.id) : adminActivateUser(row.id)
-                      }
-                    />
+                      {row.is_active ? "Deactivate" : "Activate"}
+                    </FormLink>
                   </div>
                 ),
               },

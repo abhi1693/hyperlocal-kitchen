@@ -47,9 +47,23 @@ def _prohibit_references(session: Session, references) -> None:
 
 def update_user(session: Session, user_id: UUID, data: AdminUserUpdate) -> AdminUserOut:
     user = locked(session, User, user_id, key_share=True)
-    user.name = data.name
+    for field, value in data.model_dump(exclude_unset=True).items():
+        setattr(user, field, value)
     session.flush()
     return AdminUserOut.model_validate(user)
+
+
+def delete_user(session: Session, user_id: UUID) -> None:
+    user = locked(session, User, user_id)
+    # Include every foreign key to preserve orders, audit history and future relations.
+    references = []
+    for table in User.metadata.sorted_tables:
+        for foreign_key in table.foreign_keys:
+            if foreign_key.column is User.__table__.c.id:
+                references.append((table.name, select(table).where(foreign_key.parent == user_id)))
+    _prohibit_references(session, references)
+    session.delete(user)
+    session.flush()
 
 
 def set_user_active(session: Session, user_id: UUID, active: bool) -> AdminUserOut:

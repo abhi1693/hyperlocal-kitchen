@@ -196,7 +196,7 @@ def identity(kind: Kind, flow: dict, code: str) -> dict:
     return result
 
 
-def save_user(session: Session, record: dict) -> User:
+def save_user(session: Session, record: dict, *, update_contact: bool = True) -> User:
     # A stable advisory lock serializes first sign-ins before an account row exists.
     digest = hashlib.sha256((record["issuer"] + ":" + record["subject"]).encode()).digest()
     session.execute(select(func.pg_advisory_xact_lock(int.from_bytes(digest[:8], signed=True))))
@@ -215,7 +215,8 @@ def save_user(session: Session, record: dict) -> User:
     if user.oidc_issuer != record["issuer"] or not user.is_active:
         raise oidc.OIDCError("Account unavailable")
     # Profile phone is delivery contact only, never an authentication identity.
-    user.phone = record.get("phone")
+    if update_contact:
+        user.phone = record.get("phone")
     record["user_id"] = str(user.id)
     return user
 

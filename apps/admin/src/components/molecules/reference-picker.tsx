@@ -3,13 +3,13 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   adminListCommunities,
+  adminFoodKitchens,
   adminListUsers,
   adminListMemberships,
   adminListCommunityZones,
 } from "@/lib/api/generated/admin";
 import { Field } from "./field";
-import { Input } from "@/components/atoms/input";
-import { Select } from "@/components/atoms/select";
+import { Combobox } from "./combobox";
 import { Button } from "@/components/atoms/button";
 export function ReferencePicker({
   kind,
@@ -19,14 +19,22 @@ export function ReferencePicker({
   required = true,
   value,
   onChange,
+  inline = false,
+  emptyLabel = "None",
+  selectedLabel,
+  approvedKitchensOnly = true,
 }: {
-  kind: "community" | "user" | "zone";
+  kind: "community" | "user" | "zone" | "kitchen";
   name: string;
   label: string;
   communityId?: string;
   required?: boolean;
   value?: string;
   onChange?: (value: string) => void;
+  inline?: boolean;
+  emptyLabel?: string;
+  selectedLabel?: string;
+  approvedKitchensOnly?: boolean;
 }) {
   const [search, setSearch] = useState("");
   const [q, setQ] = useState("");
@@ -44,7 +52,7 @@ export function ReferencePicker({
     setOffset(0);
   }, [communityId]);
   const query = useQuery({
-    queryKey: ["reference", kind, communityId, q, offset],
+    queryKey: ["reference", kind, communityId, q, offset, approvedKitchensOnly],
     enabled: kind !== "zone" || !!communityId,
     queryFn: async ({ signal }) => {
       const params = { q, limit: 30, offset };
@@ -55,6 +63,23 @@ export function ReferencePicker({
           items: page.items.map((row) => ({
             id: row.id,
             label: `${row.name} · ${row.city}`,
+          })),
+        };
+      }
+      if (kind === "kitchen") {
+        const page = await adminFoodKitchens(
+          {
+            ...params,
+            status: approvedKitchensOnly ? "approved" : undefined,
+            community_id: communityId || undefined,
+          },
+          { signal },
+        );
+        return {
+          total: page.total,
+          items: page.items.map((row) => ({
+            id: row.id,
+            label: `${row.name} · ${row.community_name}`,
           })),
         };
       }
@@ -91,77 +116,74 @@ export function ReferencePicker({
     },
   });
   const items = query.data?.items ?? [];
-  const options =
-    selected && !items.some((row) => row.id === selected.id) ? [selected, ...items] : items;
-  return (
+  const chosen = value ?? selected?.id ?? "";
+  const control = (
+    <Combobox
+      id={name}
+      name={name}
+      label={label}
+      required={required}
+      value={chosen}
+      placeholder={kind === "zone" && !communityId ? "Select a community first" : "Select…"}
+      className={inline ? "w-auto min-w-44" : undefined}
+      options={[
+        ...(!required ? [{ value: "", label: emptyLabel }] : []),
+        ...items.map((row) => ({ value: row.id, label: row.label })),
+      ]}
+      selectedOption={
+        chosen && (selected?.id === chosen || selectedLabel)
+          ? {
+              value: chosen,
+              label: selected?.id === chosen ? selected.label : selectedLabel!,
+            }
+          : undefined
+      }
+      disabled={kind === "zone" && !communityId}
+      search={search}
+      onSearchChange={(next) => {
+        setSearch(next);
+        setOffset(0);
+      }}
+      loading={query.isFetching || search !== q}
+      error={query.error?.message}
+      onRetry={() => query.refetch()}
+      onValueChange={(next) => {
+        const option = items.find((row) => row.id === next);
+        setSelected(option ?? null);
+        onChange?.(next);
+      }}
+      footer={
+        (query.data?.total ?? 0) > 30 && (
+          <div className="flex items-center justify-between gap-2">
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={offset === 0}
+              onClick={() => setOffset(Math.max(0, offset - 30))}
+            >
+              Previous
+            </Button>
+            <span className="text-xs text-muted-foreground">
+              {offset + 1}–{Math.min(offset + 30, query.data!.total)} of {query.data!.total}
+            </span>
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={offset + 30 >= query.data!.total}
+              onClick={() => setOffset(offset + 30)}
+            >
+              Next
+            </Button>
+          </div>
+        )
+      }
+    />
+  );
+  return inline ? (
+    control
+  ) : (
     <Field label={label} id={name}>
-      <Input
-        aria-label={`Search ${label.toLowerCase()}`}
-        placeholder={`Search ${label.toLowerCase()}…`}
-        value={search}
-        maxLength={200}
-        onChange={(event) => {
-          setSearch(event.target.value);
-          setOffset(0);
-        }}
-        disabled={kind === "zone" && !communityId}
-      />
-      <Select
-        id={name}
-        name={name}
-        required={required}
-        value={value ?? selected?.id ?? ""}
-        disabled={(kind === "zone" && !communityId) || query.isPending || !!query.error}
-        onChange={(event) => {
-          const option = options.find((row) => row.id === event.target.value);
-          setSelected(option ?? null);
-          onChange?.(event.target.value);
-        }}
-      >
-        <option value="">
-          {query.isPending && query.fetchStatus === "fetching"
-            ? "Loading…"
-            : required
-              ? "Select…"
-              : "None"}
-        </option>
-        {options.map((row) => (
-          <option key={row.id} value={row.id}>
-            {row.label}
-          </option>
-        ))}
-      </Select>
-      {query.error && (
-        <div role="alert" className="text-sm">
-          <p>{query.error.message}</p>
-          <Button size="sm" variant="outline" onClick={() => query.refetch()}>
-            Retry
-          </Button>
-        </div>
-      )}
-      {(query.data?.total ?? 0) > 30 && (
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant="ghost"
-            disabled={offset === 0}
-            onClick={() => setOffset(Math.max(0, offset - 30))}
-          >
-            Previous
-          </Button>
-          <span className="text-xs text-muted-foreground">
-            {offset + 1}–{Math.min(offset + 30, query.data!.total)}
-          </span>
-          <Button
-            size="sm"
-            variant="ghost"
-            disabled={offset + 30 >= query.data!.total}
-            onClick={() => setOffset(offset + 30)}
-          >
-            Next
-          </Button>
-        </div>
-      )}
+      {control}
     </Field>
   );
 }

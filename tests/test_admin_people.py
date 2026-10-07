@@ -121,15 +121,43 @@ def test_users_are_searchable_bounded_and_provider_identity_is_immutable(
     assert changed["name"] == "Updated resident"
     assert success(admin_client.get(user_path))["phone"] == people["resident"].phone
     for field, value in (
-        ("phone", "+919999999999"),
         ("oidc_subject", "forged-subject"),
         ("oidc_issuer", "https://forged.example.test"),
     ):
         assert admin_client.patch(user_path, json={field: value}).status_code == 422
     assert admin_client.post("/api/v1/users", json={"name": "Fake identity"}).status_code == 405
-    assert admin_client.delete(user_path).status_code == 405
+    assert admin_client.delete(user_path).status_code == 409
     for params in ({"limit": 101}, {"offset": 10001}, {"sort": "oidc_subject"}):
         assert admin_client.get("/api/v1/users", params=params).status_code == 422
+
+
+def test_contact_phone_updates_preserve_identity_and_other_profile_fields(admin_client, people):
+    path = f"/api/v1/users/{people['newcomer'].id}"
+    user = success(admin_client.patch(path, json={"phone": people["resident"].phone}))
+    assert user["phone"] == people["resident"].phone
+    assert user["name"] == "Newcomer"
+    assert admin_client.patch(path, json={"phone": "bad phone"}).status_code == 422
+    assert success(admin_client.patch(path, json={"phone": None}))["phone"] is None
+    assert admin_client.patch(path, json={}).status_code == 422
+
+
+def test_user_delete_removes_only_unused_profiles(admin_client, session, people):
+    unused = f"/api/v1/users/{people['newcomer'].id}"
+    assert admin_client.delete(unused).status_code == 204
+    assert admin_client.get(unused).status_code == 404
+    assert admin_client.delete(unused).status_code == 404
+    assert admin_client.delete(f"/api/v1/users/{people['owner'].id}").status_code == 409
+    me = User(oidc_subject="test-admin", oidc_issuer="https://identity.example.test", name="Admin")
+    session.add(me)
+    session.commit()
+    assert admin_client.delete(f"/api/v1/users/{me.id}").status_code == 409
+
+
+def test_user_delete_preserves_order_history_without_membership(admin_client, session, people):
+    user = people["newcomer"]
+    historical_order(session, people, user)
+    assert admin_client.delete(f"/api/v1/users/{user.id}").status_code == 409
+    assert success(admin_client.get(f"/api/v1/users/{user.id}"))["name"] == "Newcomer"
 
 
 def test_account_deactivation_suspends_memberships_kitchen_and_devices_without_losing_history(

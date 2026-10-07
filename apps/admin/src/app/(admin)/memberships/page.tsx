@@ -2,7 +2,8 @@ import { MembershipsPage } from "@/components/pages/memberships-page";
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ community_id?: string }>;
+  searchParams: Promise<{ community_id?: string; user_id?: string }>;
 }) {
-  return <MembershipsPage initialCommunity={(await searchParams).community_id} />;
+  const query = await searchParams;
+  return <MembershipsPage initialCommunity={query.community_id} initialUser={query.user_id} />;
 }

@@ -156,3 +156,22 @@ def test_unsupported_database_text_returns_validation_errors_before_queries():
             ("/api/v1/zones/00000000-0000-0000-0000-000000000001", {"name": "bad\x00name"}),
         ):
             assert client.patch(path, json=payload).status_code == 422
+
+
+def test_community_choice_contract_preserves_slugs_and_exposes_labels():
+    import pytest
+    from kitchen_core.catalog_schemas import CommunityCreate, CommunityUpdate
+    from pydantic import ValidationError
+
+    for app in (resident_app(), admin_app()):
+        schema = app.openapi()["components"]["schemas"]["CommunityType"]
+        choices = schema["x-choices"]
+        assert [choice["slug"] for choice in choices] == schema["enum"]
+        assert {"slug": "residential_society", "label": "Residential society"} in choices
+        assert len({choice["slug"] for choice in choices}) == 7
+    payload = CommunityCreate(name="Home", city="Pune", type="residential_society")
+    assert payload.model_dump(mode="json")["type"] == "residential_society"
+    assert CommunityCreate(name="Home", city="Pune").type == "residential_society"
+    assert CommunityUpdate(type=None).model_dump(mode="json")["type"] is None
+    with pytest.raises(ValidationError):
+        CommunityCreate(name="Home", city="Pune", type="Residential society")

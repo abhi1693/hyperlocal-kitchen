@@ -8,6 +8,7 @@ import type { AdminFoodKitchensStatus } from './adminFoodKitchensStatus';
 
 export type AdminFoodKitchensParams = {
 community_id?: string | null;
+user_id?: string | null;
 status?: AdminFoodKitchensStatus;
 /**
  * @maxLength 200

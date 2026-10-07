@@ -4,10 +4,10 @@
  * Hyperlocal Kitchen Platform Admin API
  * OpenAPI spec version: 0.1.0
  */
-import type { CommunityUpdateType } from './communityUpdateType';
+import type { CommunityType } from './communityType';
 
 export interface CommunityUpdate {
-  type?: CommunityUpdateType;
+  type?: CommunityType | null;
   name?: string | null;
   address?: string | null;
   city?: string | null;

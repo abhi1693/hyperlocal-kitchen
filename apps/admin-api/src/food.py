@@ -41,11 +41,18 @@ def kitchens(
     session: DB,
     listing: Listing,
     community_id: UUID | None = None,
+    user_id: UUID | None = None,
     status: Literal["pending", "approved", "suspended"] | None = None,
 ):
     statement = select(Kitchen)
     if community_id is not None:
         statement = statement.where(Kitchen.community_id == community_id)
+    if user_id is not None:
+        statement = statement.where(
+            select(KitchenMember.kitchen_id)
+            .where(KitchenMember.kitchen_id == Kitchen.id, KitchenMember.user_id == user_id)
+            .exists()
+        )
     if status is not None:
         statement = statement.where(Kitchen.status == status)
     if listing.q:

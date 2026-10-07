@@ -128,8 +128,8 @@ def build_auth_router(kind: auth.Kind) -> APIRouter:
                 expected_issuer=settings.oidc_issuer_url,
             )
             record = auth.identity(kind, flow, code)
-            if kind == "user":
-                auth.save_user(session, record)
+            # Admin and resident logins share the same application account.
+            auth.save_user(session, record, update_contact=kind == "user")
             if native_flow:
                 handoff = secrets.token_urlsafe(32)
                 redis.set(
