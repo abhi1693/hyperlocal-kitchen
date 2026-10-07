@@ -164,6 +164,7 @@ class KitchenPause(StrictRequest):
 class KitchenOut(BaseModel):
     id: UUID
     community_id: UUID
+    community_name: str
     name: str
     description: str | None
     zone_name: str | None = None

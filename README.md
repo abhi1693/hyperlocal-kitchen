@@ -2,7 +2,7 @@
 
 FastAPI backend for a private hyperlocal food marketplace for communities.
 Members and kitchen owners share one account and one mobile API. Platform administration has
-a separate API and Zitadel application. The admin web app and mobile UI come next.
+a separate API and Zitadel application. The admin web app lives in `apps/admin`; the mobile UI comes next.
 
 ## MVP
 
@@ -51,6 +51,7 @@ provided; uploading photos to object storage is not implemented yet.
 ```text
 apps/api/src/          Member and kitchen-owner FastAPI application
 apps/admin-api/src/    Platform-admin FastAPI application
+apps/admin/            Next.js admin UI with atomic components and generated React Query hooks
 apps/worker/src/       Pending-order expiry and optional push dispatch
 packages/core/src/    Models, contracts, business logic and Zitadel sessions
 packages/http/src/    Shared HTTP errors, auth and application setup
@@ -95,11 +96,11 @@ The association-object pattern follows the [SQLAlchemy relationship documentatio
 docker compose up --build --watch
 ```
 
-Docker Compose starts PostgreSQL, Redis, migrations, both APIs and the worker.
+Docker Compose starts PostgreSQL, Redis, migrations, both APIs, the admin UI and the worker.
 The project's local `.env` is configured for admin development. It selects
 `compose.yaml` and `compose.build.yaml` through `COMPOSE_FILE`. Member API docs:
 `http://localhost:18000/docs`. Platform-admin API docs:
-`http://localhost:3001/docs`. `/health` reports process health; `/ready` checks
+`http://localhost:13001/docs`. `/health` reports process health; `/ready` checks
 the database migration. Blank Zitadel settings leave authentication disabled;
 protected endpoints remain unavailable until configuration is supplied. Resident
 authentication can be configured later while the admin foundation is developed.
@@ -146,7 +147,7 @@ uv run alembic upgrade head
 uv run uvicorn kitchen_api.main:app --reload --port 18000 --no-access-log
 ```
 
-Run `uv run uvicorn kitchen_admin_api.main:app --reload --port 3001 --no-access-log` and
+Run `uv run uvicorn kitchen_admin_api.main:app --reload --port 13001 --no-access-log` and
 `uv run kitchen-worker` in separate terminals. The local database URLs in
 `.env.example` use the published loopback ports; Compose overrides them with
 container service names. Use HTTPS origins and secure cookies for production;
@@ -190,7 +191,7 @@ no platform-admin access. See the official [Zitadel scopes documentation](https:
 Web clients use `GET /auth/login`, `GET /auth/me` and `POST /auth/logout` under
 their API prefix. Cookies are HttpOnly and SameSite Lax. Mutations authenticated
 by cookie require the matching `Origin` and `X-CSRF-Token` returned by `/auth/me`.
-Serve the eventual web client and its API under the configured origin.
+The admin UI proxies its API under the configured origin; provider callbacks and cookies stay on that origin.
 
 Mobile login adds a small handoff to the same server-managed Zitadel flow:
 
@@ -233,7 +234,7 @@ number and does not verify it against a registry.
 The admin API follows DevFeed's resource-router pattern. Lists support `q`,
 `sort`, `limit` and `offset`, returning `{items, total, limit, offset}`. Sort fields
 are allowlisted and pagination is bounded. Typed request/response schemas supply
-the contract for the future admin web app; exports live in `docs/openapi`.
+the contract for the admin web app; exports live in `docs/openapi`.
 
 Admin routes use the same organization-scoped Zitadel role and CSRF checks.
 Editable fields use `PATCH`; lifecycle changes use explicit actions such as
@@ -391,7 +392,7 @@ Suspending membership in one community does not suspend the others.
 
 ## Client onboarding
 
-The mobile and admin UIs are not implemented in this repository. Their contracts
+The admin UI is implemented in `apps/admin`; the mobile UI is not implemented yet. Their contracts
 now support `Find your community → Join immediately → Browse menu`. Home details
 are optional and can be collected at delivery checkout. Residential communities
 can label zone/address inputs "Tower" and "Flat"; cantonments and other communities
@@ -421,6 +422,26 @@ the old schema. Rollback requires restoring the pre-migration database backup.
 Optional push delivery commits each notification separately, releasing device
 locks before claiming another notification. Delivery is at least once; clients
 can deduplicate using the notification ID.
+
+## Admin web app
+
+The monochrome admin interface follows DevFeed's Next.js layout and API gateway
+pattern. It uses atomic components, shadcn/ui, Tailwind, and Orval-generated
+React Query hooks. See [admin development](apps/admin/README.md) for architecture,
+authentication and runtime configuration.
+
+```sh
+npm ci
+cp apps/admin/.env.example apps/admin/.env.local
+npm run admin:dev
+# After an API contract change:
+npm run admin:generate
+```
+
+The UI uses port `3001`; the admin API uses `13001`. The configured admin origin
+and Zitadel callback remain on the UI's port `3001`. Existing local environments
+that use API port `3001` need to change `KITCHEN_ADMIN_API_PORT` to `13001` and set
+`KITCHEN_ADMIN_WEB_PORT=3001` before starting both services.
 
 ## Validation
 

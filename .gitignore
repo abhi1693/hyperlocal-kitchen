@@ -14,3 +14,7 @@ dist/
 .coverage
 htmlcov/
 reports/
+
+node_modules/
+.next/
+*.tsbuildinfo

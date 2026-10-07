@@ -5387,6 +5387,252 @@
         }
       }
     },
+    "/api/v1/kitchens/{kitchen_id}/pause": {
+      "post": {
+        "tags": [
+          "food administration"
+        ],
+        "summary": "Pause Kitchen",
+        "operationId": "admin_food_pause_kitchen",
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "kitchen_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Kitchen Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KitchenPause",
+                "default": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KitchenOwnOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/kitchens/{kitchen_id}/resume": {
+      "post": {
+        "tags": [
+          "food administration"
+        ],
+        "summary": "Resume Kitchen",
+        "operationId": "admin_food_resume_kitchen",
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "kitchen_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Kitchen Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KitchenOwnOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
     "/api/v1/kitchens/{kitchen_id}/members": {
       "get": {
         "tags": [
@@ -9630,6 +9876,134 @@
         }
       }
     },
+    "/api/v1/kitchens/{kitchen_id}/prep-summary": {
+      "get": {
+        "tags": [
+          "admin-orders"
+        ],
+        "summary": "Kitchen Prep Summary",
+        "operationId": "admin_kitchen_prep_summary",
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "kitchen_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Kitchen Id"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "Date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrepSummary"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
     "/api/v1/kitchens/{kitchen_id}/fulfillment-groups": {
       "get": {
         "tags": [
@@ -11258,6 +11632,10 @@
             "format": "uuid",
             "title": "Community Id"
           },
+          "community_name": {
+            "type": "string",
+            "title": "Community Name"
+          },
           "name": {
             "type": "string",
             "title": "Name"
@@ -11331,6 +11709,7 @@
         "required": [
           "id",
           "community_id",
+          "community_name",
           "name",
           "description",
           "pickup_enabled",
@@ -11354,6 +11733,10 @@
             "type": "string",
             "format": "uuid",
             "title": "Community Id"
+          },
+          "community_name": {
+            "type": "string",
+            "title": "Community Name"
           },
           "name": {
             "type": "string",
@@ -11474,6 +11857,7 @@
         "required": [
           "id",
           "community_id",
+          "community_name",
           "name",
           "description",
           "pickup_enabled",
@@ -11487,6 +11871,25 @@
           "upi_id"
         ],
         "title": "KitchenOwnOut"
+      },
+      "KitchenPause": {
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "KitchenPause"
       },
       "ListingCreate": {
         "properties": {
@@ -12756,6 +13159,110 @@
         "additionalProperties": false,
         "type": "object",
         "title": "PickupPointUpdate"
+      },
+      "PrepDishSummary": {
+        "properties": {
+          "dish_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Dish Id"
+          },
+          "dish_name": {
+            "type": "string",
+            "title": "Dish Name"
+          },
+          "portion_count": {
+            "type": "integer",
+            "title": "Portion Count"
+          },
+          "order_count": {
+            "type": "integer",
+            "title": "Order Count"
+          },
+          "notes": {
+            "items": {
+              "$ref": "#/components/schemas/PrepOrderNote"
+            },
+            "type": "array",
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dish_id",
+          "dish_name",
+          "portion_count",
+          "order_count",
+          "notes"
+        ],
+        "title": "PrepDishSummary"
+      },
+      "PrepOrderNote": {
+        "properties": {
+          "order_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Order Id"
+          },
+          "order_number": {
+            "type": "integer",
+            "title": "Order Number"
+          },
+          "quantity": {
+            "type": "integer",
+            "title": "Quantity"
+          },
+          "customer_note": {
+            "type": "string",
+            "title": "Customer Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "order_id",
+          "order_number",
+          "quantity",
+          "customer_note"
+        ],
+        "title": "PrepOrderNote"
+      },
+      "PrepSummary": {
+        "properties": {
+          "kitchen_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Kitchen Id"
+          },
+          "service_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Service Date"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PrepDishSummary"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total_portions": {
+            "type": "integer",
+            "title": "Total Portions"
+          },
+          "order_count": {
+            "type": "integer",
+            "title": "Order Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kitchen_id",
+          "service_date",
+          "items",
+          "total_portions",
+          "order_count"
+        ],
+        "title": "PrepSummary"
       }
     },
     "securitySchemes": {

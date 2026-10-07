@@ -8510,6 +8510,10 @@
             "format": "uuid",
             "title": "Community Id"
           },
+          "community_name": {
+            "type": "string",
+            "title": "Community Name"
+          },
           "name": {
             "type": "string",
             "title": "Name"
@@ -8583,6 +8587,7 @@
         "required": [
           "id",
           "community_id",
+          "community_name",
           "name",
           "description",
           "pickup_enabled",
@@ -8606,6 +8611,10 @@
             "type": "string",
             "format": "uuid",
             "title": "Community Id"
+          },
+          "community_name": {
+            "type": "string",
+            "title": "Community Name"
           },
           "name": {
             "type": "string",
@@ -8726,6 +8735,7 @@
         "required": [
           "id",
           "community_id",
+          "community_name",
           "name",
           "description",
           "pickup_enabled",

@@ -665,10 +665,20 @@ def record_payment(
 
 
 def prep_summary(
-    session: Session, user: User, kitchen_id: UUID, service_date: date
+    session: Session,
+    user: User | None,
+    kitchen_id: UUID,
+    service_date: date,
+    *,
+    admin: bool = False,
 ) -> PrepSummary:
     """Compute outstanding portions and customer notes from committed order items."""
-    _kitchen_access(session, user.id, kitchen_id)
+    if admin:
+        catalog._get(session, Kitchen, kitchen_id)
+    else:
+        if user is None:
+            raise DomainError(403, "kitchen_access_denied", "Sign in to manage this kitchen.")
+        _kitchen_access(session, user.id, kitchen_id)
     start = datetime.combine(service_date, time.min, tzinfo=ZoneInfo("Asia/Kolkata"))
     rows = session.execute(
         select(

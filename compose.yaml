@@ -116,9 +116,26 @@ services:
     depends_on: *ready
     ports:
       - target: 8000
-        published: "${KITCHEN_ADMIN_API_PORT:-3001}"
+        published: "${KITCHEN_ADMIN_API_PORT:-13001}"
         host_ip: "${KITCHEN_BIND_IP:-0.0.0.0}"
     healthcheck: *api-healthcheck
+
+  admin:
+    init: true
+    restart: unless-stopped
+    image: hyperlocal-kitchen/admin:local
+    environment:
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: "1"
+      KITCHEN_ADMIN_API_URL: http://admin-api:8000
+      KITCHEN_ADMIN_BASE_URL: ${KITCHEN_ADMIN_BASE_URL:-http://localhost:3001}
+    depends_on:
+      admin-api:
+        condition: service_healthy
+    ports:
+      - target: 3000
+        published: "${KITCHEN_ADMIN_WEB_PORT:-3001}"
+        host_ip: "${KITCHEN_BIND_IP:-0.0.0.0}"
 
   worker:
     <<: *backend

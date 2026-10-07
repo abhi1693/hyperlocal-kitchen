@@ -4,7 +4,9 @@ RUN pip install --no-cache-dir uv==0.12.21
 WORKDIR /app
 COPY pyproject.toml uv.lock ./
 COPY packages/ packages/
-COPY apps/ apps/
+COPY apps/api/ apps/api/
+COPY apps/admin-api/ apps/admin-api/
+COPY apps/worker/ apps/worker/
 RUN --mount=type=cache,target=/root/.cache/uv uv sync --frozen --all-packages --no-dev
 COPY alembic.ini ./
 COPY migrations/ migrations/

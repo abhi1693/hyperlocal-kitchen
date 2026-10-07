@@ -23,6 +23,7 @@ from kitchen_core.catalog_schemas import (
     DishUpdate,
     KitchenApprove,
     KitchenOwnOut,
+    KitchenPause,
     ListingCreate,
     ListingOut,
     ListingUpdate,
@@ -109,6 +110,26 @@ def approve_kitchen(kitchen_id: UUID, data: KitchenApprove, session: DB):
 )
 def suspend_kitchen(kitchen_id: UUID, session: DB):
     return catalog.suspend_kitchen(session, kitchen_id)
+
+
+@router.post(
+    "/kitchens/{kitchen_id}/pause",
+    response_model=KitchenOwnOut,
+    operation_id="admin_food_pause_kitchen",
+)
+def pause_kitchen(kitchen_id: UUID, session: DB, data: KitchenPause = KitchenPause()):
+    return catalog.set_kitchen_accepting_orders(
+        session, None, kitchen_id, accepting=False, reason=data.reason, admin=True
+    )
+
+
+@router.post(
+    "/kitchens/{kitchen_id}/resume",
+    response_model=KitchenOwnOut,
+    operation_id="admin_food_resume_kitchen",
+)
+def resume_kitchen(kitchen_id: UUID, session: DB):
+    return catalog.set_kitchen_accepting_orders(session, None, kitchen_id, accepting=True, admin=True)
 
 
 @router.get(

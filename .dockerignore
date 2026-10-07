@@ -10,3 +10,7 @@ tests
 reports
 *.egg-info
 **/build
+
+**/node_modules
+**/.next
+**/*.tsbuildinfo

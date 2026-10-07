@@ -29,3 +29,12 @@ services:
   worker:
     <<: *backend-build
     develop: *backend-develop
+  admin:
+    build:
+      context: .
+      dockerfile: apps/admin/Dockerfile
+    develop:
+      watch:
+        - {action: rebuild, path: ./apps/admin}
+        - {action: rebuild, path: ./package.json}
+        - {action: rebuild, path: ./package-lock.json}

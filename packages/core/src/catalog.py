@@ -179,10 +179,12 @@ def membership_view(session: Session, membership: Membership, *, admin: bool = F
 
 
 def kitchen_view(session: Session, kitchen: Kitchen, *, private: bool = False):
+    community = _get(session, Community, kitchen.community_id)
     zone = _get(session, CommunityZone, kitchen.zone_id) if kitchen.zone_id else None
     data: dict[str, Any] = dict(
         id=kitchen.id,
         community_id=kitchen.community_id,
+        community_name=community.name,
         name=kitchen.name,
         description=kitchen.description,
         zone_name=zone.name if zone else None,
@@ -519,13 +521,14 @@ def update_kitchen(
 
 def set_kitchen_accepting_orders(
     session: Session,
-    user_id: UUID,
+    user_id: UUID | None,
     kitchen_id: UUID,
     *,
     accepting: bool,
     reason: str | None = None,
+    admin: bool = False,
 ) -> KitchenOwnOut:
-    _require_kitchen_mutation(session, user_id, kitchen_id)
+    _require_kitchen_mutation(session, user_id, kitchen_id, admin=admin)
     # Serialize pause/resume with checkout's SHARE lock. NO KEY UPDATE remains
     # compatible with foreign-key inserts referencing the kitchen.
     kitchen = session.scalar(
@@ -535,7 +538,7 @@ def set_kitchen_accepting_orders(
         .execution_options(populate_existing=True)
     )
     # Recheck restrictions after waiting for any concurrent kitchen mutation.
-    kitchen = _require_kitchen_mutation(session, user_id, kitchen_id)
+    kitchen = _require_kitchen_mutation(session, user_id, kitchen_id, admin=admin)
     if accepting:
         kitchen.paused_at = None
         kitchen.pause_reason = None

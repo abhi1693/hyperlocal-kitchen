@@ -4,7 +4,7 @@ from datetime import date
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header
+from fastapi import APIRouter, Depends, Header, Query
 from kitchen_admin_api.dependencies import DB, Admin
 from kitchen_admin_api.pagination import Listing, Page, paginate, record
 from kitchen_core import orders as service
@@ -16,6 +16,7 @@ from kitchen_core.order_schemas import (
     OrderOut,
     OrderReject,
     PaymentStatus,
+    PrepSummary,
 )
 from kitchen_http.auth import require_admin
 from sqlalchemy import String, cast, or_, select
@@ -148,6 +149,17 @@ def report_payment(order_id: UUID, session: DB, admin: Admin):
 )
 def confirm_payment(order_id: UUID, session: DB, admin: Admin):
     return service.record_payment(session, None, order_id, "confirm", admin=True)
+
+
+@router.get(
+    "/kitchens/{kitchen_id}/prep-summary",
+    response_model=PrepSummary,
+    operation_id="admin_kitchen_prep_summary",
+)
+def kitchen_prep_summary(
+    kitchen_id: UUID, on: Annotated[date, Query(alias="date")], session: DB
+):
+    return service.prep_summary(session, None, kitchen_id, on, admin=True)
 
 
 @router.get(

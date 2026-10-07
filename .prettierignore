@@ -1,0 +1,6 @@
+node_modules/
+.next/
+.venv/
+apps/admin/src/lib/api/generated/
+package-lock.json
+docs/openapi/
