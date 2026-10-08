@@ -347,7 +347,7 @@ def join_community(
         raise DomainError(
             403, "membership_suspended", "Your community membership is suspended. Contact support."
         )
-    if membership is not None and membership.status == "active":
+    if membership is not None:
         if membership.zone_id != data.zone_id or membership.address_label != data.address_label:
             raise DomainError(
                 409,
@@ -355,19 +355,14 @@ def join_community(
                 "Your membership already uses another home zone or address.",
             )
         return membership_view(session, membership)
-    if membership is None:
-        membership = Membership(
-            community_id=community_id,
-            user_id=user.id,
-            zone_id=data.zone_id,
-            address_label=data.address_label,
-            status="active",
-        )
-        session.add(membership)
-    else:
-        membership.zone_id = data.zone_id
-        membership.address_label = data.address_label
-        membership.status = "active"
+    membership = Membership(
+        community_id=community_id,
+        user_id=user.id,
+        zone_id=data.zone_id,
+        address_label=data.address_label,
+        status="active",
+    )
+    session.add(membership)
     session.flush()
     return membership_view(session, membership)
 

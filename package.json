@@ -8,7 +8,8 @@
     "admin:dev": "npm run dev --workspace @kitchen/admin",
     "admin:build": "npm run build --workspace @kitchen/admin",
     "admin:start": "npm run start --workspace @kitchen/admin",
-    "admin:generate": "uv run python scripts/export_openapi.py && npm run generate --workspace @kitchen/admin"
+    "admin:generate": "uv run python scripts/export_openapi.py && npm run generate --workspace @kitchen/admin",
+    "admin:typecheck": "npm run typecheck --workspace @kitchen/admin"
   },
   "engines": {
     "node": ">=22.13"

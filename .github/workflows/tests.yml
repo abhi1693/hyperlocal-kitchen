@@ -20,9 +20,10 @@ jobs:
           version: '0.12.21'
           enable-cache: true
       - run: uv sync --all-packages --locked
-      - run: uv run --no-sync ruff check .
-      - run: uv run --no-sync ruff format --check .
-      - run: uv run --no-sync mypy -p kitchen_core -p kitchen_http -p kitchen_api -p kitchen_admin_api -p kitchen_worker
+      - run: uv run --no-sync pre-commit validate-config
+      - run: uv run --no-sync pre-commit run ruff-check --all-files
+      - run: uv run --no-sync pre-commit run ruff-format --all-files
+      - run: uv run --no-sync pre-commit run mypy --all-files
   integration:
     name: PostgreSQL and Redis integration tests
     runs-on: ubuntu-24.04-arm
@@ -74,19 +75,20 @@ jobs:
           {
             echo "KITCHEN_TEST_DATABASE_URL=postgresql+psycopg://ci:ci@127.0.0.1:$POSTGRES_PORT/kitchen_test"
             echo "KITCHEN_DATABASE_URL=postgresql+psycopg://ci:ci@127.0.0.1:$POSTGRES_PORT/kitchen_test"
-            echo "KITCHEN_REDIS_URL=redis://127.0.0.1:$REDIS_PORT/15"
+            echo "KITCHEN_TEST_REDIS_URL=redis://127.0.0.1:$REDIS_PORT/15"
           } >> "$GITHUB_ENV"
-      - name: Upgrade a fresh database and verify idempotency
-        run: |
-          uv run --no-sync alembic upgrade head
-          uv run --no-sync alembic upgrade head
-          uv run --no-sync alembic check
-      - name: Run backend tests
-        run: uv run --no-sync pytest -q --junitxml=reports/backend.xml
+      - name: Run migrations and backend tests through the commit hook
+        env:
+          PYTEST_ADDOPTS: --junitxml=reports/backend.xml
+        run: uv run --no-sync pre-commit run backend-tests --all-files
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
           name: backend-test-results-${{ github.run_attempt }}
-          path: reports/backend.xml
+          path: |
+            reports/backend.xml
+            reports/coverage.xml
+            reports/coverage.json
+            reports/coverage-html
           if-no-files-found: warn
           retention-days: 14

@@ -26,7 +26,17 @@ kitchen-admin-api = { workspace = true }
 kitchen-worker = { workspace = true }
 
 [dependency-groups]
-dev = ["kitchen-api", "kitchen-admin-api", "kitchen-worker", "pytest>=8.3,<10", "ruff>=0.12,<1", "mypy>=1.15,<3", "httpx>=0.28,<1"]
+dev = [
+    "kitchen-api",
+    "kitchen-admin-api",
+    "kitchen-worker",
+    "pytest>=8.3,<10",
+    "ruff>=0.12,<1",
+    "mypy>=1.15,<3",
+    "httpx>=0.28,<1",
+    "pre-commit>=4.3,<5",
+    "pytest-cov>=6,<8",
+]
 
 [tool.ruff]
 target-version = "py312"
@@ -37,9 +47,27 @@ select = ["E", "F", "I", "UP"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-ra"
+addopts = "-ra --cov --cov-report=term-missing --cov-report=xml --cov-report=json --cov-report=html"
 
 [tool.mypy]
 python_version = "3.12"
 check_untyped_defs = true
 ignore_missing_imports = true
+
+[tool.coverage.run]
+branch = true
+source = ["packages/core/src", "packages/http/src", "apps/api/src", "apps/admin-api/src", "apps/worker/src"]
+
+[tool.coverage.report]
+fail_under = 100
+show_missing = true
+precision = 2
+
+[tool.coverage.html]
+directory = "reports/coverage-html"
+
+[tool.coverage.xml]
+output = "reports/coverage.xml"
+
+[tool.coverage.json]
+output = "reports/coverage.json"

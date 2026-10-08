@@ -1,0 +1,36 @@
+minimum_pre_commit_version: '4.3.0'
+default_stages: [pre-commit]
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: Python lint
+        entry: uv run --locked --no-sync ruff check .
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: ruff-format
+        name: Python formatting
+        entry: uv run --locked --no-sync ruff format --check .
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: mypy
+        name: Python type checks
+        entry: uv run --locked --no-sync mypy -p kitchen_core -p kitchen_http -p kitchen_api -p kitchen_admin_api -p kitchen_worker
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: backend-tests
+        name: PostgreSQL migrations and backend tests
+        entry: uv run --locked --no-sync python scripts/check_backend.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        require_serial: true
+      - id: admin-types
+        name: Admin TypeScript checks
+        entry: npm run admin:typecheck
+        language: system
+        pass_filenames: false
+        files: ^(apps/admin/|package(-lock)?\.json$|\.pre-commit-config\.yaml$)

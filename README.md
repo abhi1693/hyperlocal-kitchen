@@ -456,13 +456,53 @@ database name must end in `_test`; tests recreate its application tables. Use
 Redis database 15 and no shared provider/session data.
 
 ```sh
-KITCHEN_TEST_DATABASE_URL=postgresql+psycopg://kitchen:password@localhost:5432/kitchen_test \
-KITCHEN_REDIS_URL=redis://localhost:6379/15 uv run pytest -q
+uv run --no-sync python scripts/check_backend.py
 uv run ruff check .
 uv run ruff format --check .
 uv run mypy -p kitchen_core -p kitchen_http -p kitchen_api -p kitchen_admin_api -p kitchen_worker
 uv run python scripts/export_openapi.py
 ```
+
+Install the commit hooks once per checkout:
+
+```sh
+uv sync --all-packages --locked
+npm ci
+uv run --no-sync pre-commit install
+uv run --no-sync pre-commit run --all-files
+```
+
+Every commit runs Ruff lint and formatting checks, mypy, fresh/repeated Alembic
+upgrades, schema comparison, and the full backend test suite. Admin changes also
+run TypeScript checks. Hooks report failures without automatically fixing files.
+The same backend hooks run in GitHub Actions; CI retains the admin build and
+contract generation checks.
+
+The backend hook starts disposable PostgreSQL 17 and Redis 8 containers on random
+loopback ports and removes them, including their volumes, when checks finish.
+Docker must be running; the first run downloads the images. Existing application
+services and `.env` authentication settings are not used. To use your own dedicated
+test services instead (both variables are required):
+
+```sh
+export KITCHEN_TEST_DATABASE_URL=postgresql+psycopg://kitchen:password@localhost:5432/kitchen_test
+export KITCHEN_TEST_REDIS_URL=redis://localhost:6379/15
+uv run --no-sync pre-commit run --all-files
+```
+
+Each run creates and removes a unique PostgreSQL schema so repeated runs start
+fresh, including when explicit service URLs are supplied. These explicit services
+must still be disposable: tests clear Redis database 15. A PostgreSQL name ending in `_test` and Redis
+database 15 are enforced. Other contributors must install the hooks in their own
+checkout; Git hooks are not installed by cloning.
+
+Backend coverage measures every line and branch in `kitchen_core`, `kitchen_http`,
+`kitchen_api`, `kitchen_admin_api`, and `kitchen_worker`, across unit and integration
+tests. The full commit/CI suite requires 100% coverage. HTML, XML, and JSON reports
+are written under `reports/`; open `reports/coverage-html/index.html` to inspect
+individual files. The admin frontend, migrations, and repository scripts are
+outside this Python application coverage target; migrations still run and are
+validated separately before the test suite.
 
 Integration tests cover concurrent reservations, checkout retries, stock
 release, ownership and community boundaries, onboarding and the order lifecycle.

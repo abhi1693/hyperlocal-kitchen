@@ -238,8 +238,8 @@ def test_shared_kitchens_in_multiple_communities_can_deactivate_both_users_concu
     session.flush()
     session.add_all(
         [
-            KitchenMember(kitchen_id=people["kitchen"].id, user_id=resident.id, role="owner"),
-            KitchenMember(kitchen_id=park_kitchen.id, user_id=owner.id, role="owner"),
+            KitchenMember(kitchen_id=people["kitchen"].id, user_id=resident.id, role="manager"),
+            KitchenMember(kitchen_id=park_kitchen.id, user_id=owner.id, role="manager"),
             KitchenMember(kitchen_id=park_kitchen.id, user_id=resident.id, role="owner"),
         ]
     )

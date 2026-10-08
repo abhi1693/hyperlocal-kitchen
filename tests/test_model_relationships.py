@@ -114,7 +114,7 @@ def model_graph(session):
     kitchen_memberships = [
         KitchenMember(kitchen_id=kitchen.id, user_id=owner.id, role="owner"),
         KitchenMember(kitchen_id=kitchen.id, user_id=manager.id, role="manager"),
-        KitchenMember(kitchen_id=other_kitchen.id, user_id=owner.id, role="owner"),
+        KitchenMember(kitchen_id=other_kitchen.id, user_id=owner.id, role="manager"),
     ]
     dish = Dish(kitchen_id=kitchen.id, name="Rajma Chawal")
     session.add_all([*kitchen_memberships, dish])
@@ -199,6 +199,12 @@ def test_many_to_many_associations_preserve_role_and_resident_address(session, m
     assert {membership.kitchen.name for membership in owner.kitchen_memberships} == {
         "Garden Kitchen",
         "Park Kitchen",
+    }
+    assert {
+        (membership.kitchen.name, membership.role) for membership in owner.kitchen_memberships
+    } == {
+        ("Garden Kitchen", "owner"),
+        ("Park Kitchen", "manager"),
     }
     assert {(membership.user.name, membership.role) for membership in kitchen.memberships} == {
         ("Owner", "owner"),
