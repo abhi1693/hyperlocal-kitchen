@@ -30,6 +30,22 @@ jobs:
       scripts: '{"generate":"admin:generate","build":"admin:build"}'
       generated-paths: '["docs/openapi","apps/admin/src/lib/api/generated","apps/admin/src/lib/api/community-type-choices.ts"]'
       project-env: '{"NEXT_TELEMETRY_DISABLED":"1","KITCHEN_ENVIRONMENT":"test","KITCHEN_COOKIE_SECURE":"false","KITCHEN_DATABASE_URL":"postgresql+psycopg://ci:ci@database.invalid/kitchen_test","KITCHEN_REDIS_URL":"redis://redis.invalid/15","KITCHEN_ADMIN_API_URL":"http://127.0.0.1:13001","KITCHEN_ADMIN_BASE_URL":"http://localhost:3001"}'
+  mobile:
+    name: Mobile lint, types and Android/iOS bundles
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run mobile:lint
+      - run: npm run mobile:typecheck
+      - run: npm run mobile:export
   security:
     uses: ./.github/workflows/security.yml
     permissions:
@@ -51,7 +67,7 @@ jobs:
   required:
     name: CI required
     if: ${{ always() }}
-    needs: [backend, admin, security, containers]
+    needs: [backend, admin, mobile, security, containers]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:

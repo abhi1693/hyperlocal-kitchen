@@ -2,16 +2,32 @@
   "name": "hyperlocal-kitchen",
   "private": true,
   "workspaces": [
-    "apps/admin"
+    "apps/admin",
+    "apps/mobile"
   ],
   "scripts": {
     "admin:dev": "npm run dev --workspace @kitchen/admin",
     "admin:build": "npm run build --workspace @kitchen/admin",
     "admin:start": "npm run start --workspace @kitchen/admin",
     "admin:generate": "uv run python scripts/export_openapi.py && npm run generate --workspace @kitchen/admin",
-    "admin:typecheck": "npm run typecheck --workspace @kitchen/admin"
+    "admin:typecheck": "npm run typecheck --workspace @kitchen/admin",
+    "mobile:start": "npm run start --workspace @kitchen/mobile",
+    "mobile:android": "npm run android --workspace @kitchen/mobile",
+    "mobile:ios": "npm run ios --workspace @kitchen/mobile",
+    "mobile:typecheck": "npm run typecheck --workspace @kitchen/mobile",
+    "mobile:lint": "npm run lint --workspace @kitchen/mobile",
+    "mobile:export": "npm run export --workspace @kitchen/mobile",
+    "mobile:prebuild": "npm run prebuild --workspace @kitchen/mobile"
   },
   "engines": {
     "node": ">=22.13"
+  },
+  "devDependencies": {
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
+  },
+  "overrides": {
+    "react-native-reanimated": "4.5.1",
+    "react-native-worklets": "0.10.1"
   }
 }

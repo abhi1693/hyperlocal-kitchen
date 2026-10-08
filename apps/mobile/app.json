@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "Hyperlocal Kitchen",
+    "slug": "hyperlocal-kitchen",
+    "version": "0.1.0",
+    "scheme": "hyperlocal-kitchen",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "icon": "./assets/icon.png",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.hyperlocalkitchen.app"
+    },
+    "android": {
+      "package": "com.hyperlocalkitchen.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundColor": "#FFF8F3"
+      }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "platforms": [
+      "android",
+      "ios"
+    ]
+  }
+}

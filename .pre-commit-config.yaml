@@ -34,3 +34,15 @@ repos:
         language: system
         pass_filenames: false
         files: ^(apps/admin/|package(-lock)?\.json$|\.pre-commit-config\.yaml$)
+      - id: mobile-lint
+        name: Mobile lint
+        entry: npm run mobile:lint
+        language: system
+        pass_filenames: false
+        files: ^(apps/mobile/|package(-lock)?\.json$|\.pre-commit-config\.yaml$)
+      - id: mobile-types
+        name: Mobile TypeScript checks
+        entry: npm run mobile:typecheck
+        language: system
+        pass_filenames: false
+        files: ^(apps/mobile/|package(-lock)?\.json$|\.pre-commit-config\.yaml$)

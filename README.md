@@ -8,7 +8,7 @@ assignment are protected by a database constraint. Before applying migration
 migration rejects duplicates without changing ownership automatically.
 
 Members and kitchen owners share one account and one mobile API. Platform administration has
-a separate API and Zitadel application. The admin web app lives in `apps/admin`; the mobile UI comes next.
+a separate API and Zitadel application. The admin web app lives in `apps/admin`; the mobile app scaffold lives in `apps/mobile`.
 
 ## MVP
 
@@ -398,7 +398,7 @@ Suspending membership in one community does not suspend the others.
 
 ## Client onboarding
 
-The admin UI is implemented in `apps/admin`; the mobile UI is not implemented yet. Their contracts
+The admin UI is implemented in `apps/admin`; the mobile navigation scaffold lives in `apps/mobile`. Their contracts
 now support `Find your community → Join immediately → Browse menu`. Home details
 are optional and can be collected at delivery checkout. Residential communities
 can label zone/address inputs "Tower" and "Flat"; cantonments and other communities
@@ -550,3 +550,7 @@ wheels must support musl on ARM64. The admin runtime contains Node.js and the
 standalone Next.js output, with package managers kept in the build stage.
 Image smoke checks verify native backend imports and non-root execution.
 Nested local `.env` files are excluded from every Docker build context.
+
+## Mobile app
+
+The Android/iOS Expo app lives in `apps/mobile`. It currently provides a themed navigation shell; login and ordering are not connected yet. See [mobile setup and stack decisions](apps/mobile/README.md) for development builds, checks, and maintenance.
