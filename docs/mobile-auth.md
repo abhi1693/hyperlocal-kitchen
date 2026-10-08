@@ -55,6 +55,41 @@ The backend enables this endpoint only when both
 Otherwise it returns `503 auth_not_configured` without creating a profile. The
 development flag cannot enable the flow in production.
 
+## Community selection after login
+
+After restoring or creating a session, the app requests
+`GET /api/v1/me/onboarding` before opening the main tabs. The response contains
+`completed` and the user's first `membership`, or `null` when none exists. Any
+community membership completes onboarding. An admin-created membership, a
+membership without an address, or a suspended membership skips initial setup;
+the API still enforces membership and community status for marketplace actions.
+
+A user without a membership chooses an active community. A zone and an address
+are optional. Only active zones in the selected community are offered. The app
+loads more communities as needed and saves the selection through:
+
+```http
+POST /api/v1/me/onboarding
+Authorization: Bearer <session_token>
+Content-Type: application/json
+```
+
+```json
+{"community_id": "<community-uuid>"}
+```
+
+Include `zone_id` and `address_label` when supplied. The backend returns the
+onboarding state and existing membership if another request already completed
+setup. If a response is lost, the app refreshes that state before asking the user
+to save again. A failed initial status request offers a retry and keeps the main
+tabs gated until the server responds.
+
+Account can add, update, or clear the address using
+`PATCH /api/v1/me/memberships/{membership_id}`. An address does not decide whether
+onboarding is complete. Community and zone creation remain platform-admin
+operations. Onboarding belongs to the backend account and persists across
+reinstallations; the app does not use a device-only first-launch flag.
+
 ## Development identities and production gate
 
 These profiles use the separate issuer `urn:kitchen:development:phone`.
@@ -209,7 +244,9 @@ delivery has been performed for the current development phone screen.
 ## Device verification
 
 Use installed development builds on Android and iOS. Confirm splash → phone
-entry → app, invalid numbers, relaunch/session restoration, logout, disabled
-development login, and API error handling. Production phone verification and
+entry → community selection → app, optional address entry and Account edits,
+existing-member bypass, paginated community selection, relaunch/session
+restoration, logout, disabled development login, and retry after API errors.
+Production phone verification and
 the future ZITADEL handoff need separate live tests once implemented. Unit tests
 and JavaScript exports do not replace a device check or prove SMS delivery.

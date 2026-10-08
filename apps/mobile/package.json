@@ -30,12 +30,14 @@
     "eslint-config-expo": "~57.0.2",
     "jest": "~29.7.0",
     "jest-expo": "~57.0.5",
+    "orval": "8.38.0",
     "typescript": "~6.0.3"
   },
   "scripts": {
     "start": "expo start --dev-client",
     "android": "expo run:android",
     "ios": "expo run:ios",
+    "generate": "orval --config orval.config.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "export": "expo export --platform android --platform ios --output-dir dist",
@@ -43,6 +45,7 @@
     "mobile:start": "npm run start --",
     "mobile:android": "npm run android --",
     "mobile:ios": "npm run ios --",
+    "mobile:generate": "npm run generate --",
     "mobile:typecheck": "npm run typecheck --",
     "mobile:lint": "npm run lint --",
     "mobile:export": "npm run export --",

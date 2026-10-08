@@ -31,6 +31,8 @@ from kitchen_core.catalog_schemas import (
     MembershipJoin,
     MembershipOut,
     MembershipPage,
+    OnboardingComplete,
+    OnboardingState,
     PickupPointOut,
     ZoneType,
 )
@@ -377,6 +379,35 @@ def my_memberships(session: Session, user_id: UUID, limit: int, offset: int) -> 
         offset,
     )
     return [membership_view(session, m) for m in rows]
+
+
+def onboarding_state(session: Session, user_id: UUID) -> OnboardingState:
+    membership = session.scalar(
+        select(Membership)
+        .where(Membership.user_id == user_id)
+        .order_by(Membership.created_at, Membership.id)
+        .limit(1)
+        .execution_options(populate_existing=True)
+    )
+    return OnboardingState(
+        completed=membership is not None,
+        membership=membership_view(session, membership) if membership is not None else None,
+    )
+
+
+def complete_onboarding(session: Session, user: User, data: OnboardingComplete) -> OnboardingState:
+    # The shared user lock serializes first onboarding on different devices.
+    user = _locked_active_user(session, user.id)
+    current = onboarding_state(session, user.id)
+    if current.completed:
+        return current
+    join_community(
+        session,
+        user,
+        data.community_id,
+        MembershipJoin(zone_id=data.zone_id, address_label=data.address_label),
+    )
+    return onboarding_state(session, user.id)
 
 
 def list_memberships(

@@ -1,6 +1,6 @@
 # Hyperlocal Kitchen mobile
 
-One Android/iOS app for residents and kitchen operators. The app opens with a name splash, then a custom phone login/register page. Local development currently skips OTP; production phone authentication is disabled until verification is implemented. Authenticated users have Discover, Orders, and Account tabs; marketplace screens are still being built. Platform administration stays in the existing web app.
+One Android/iOS app for residents and kitchen operators. The app opens with a name splash, then a custom phone login/register page. Local development currently skips OTP; production phone authentication is disabled until verification is implemented. After login, users without a community membership choose their community once before opening Discover, Orders, and Account. An address is optional and can be edited from Account. Marketplace screens are still being built. Platform administration stays in the existing web app.
 
 ## Stack and decisions
 
@@ -33,6 +33,26 @@ Android requires Android Studio/SDK and a JDK supported by this Expo release. iO
 
 For cloud builds, from `apps/mobile` run `npx eas-cli@latest build:configure` with the project owner's Expo account, then `npx eas-cli@latest build --platform all --profile development`. Commit the resulting project ID once linked. Development, internal preview, and production profiles are defined in `eas.json`. Cloud builds/signing and store submission have not been performed. Confirm ownership of `com.hyperlocalkitchen.app` before distributing; it is the initial application identifier, not an assertion of store registration.
 
+## Community onboarding
+
+The API's `GET /api/v1/me/onboarding` decides whether community selection is needed. Any existing membership completes onboarding, including one created by an admin or one without an address. Membership status and community availability still control marketplace access through the backend; they do not restart first-use onboarding.
+
+New residents select an active community, optionally select an active zone, and optionally enter their flat, building, or delivery address. Community lists are paginated. Saving calls `POST /api/v1/me/onboarding`; the backend returns the existing membership if setup was already completed on another device. The app checks the server again if the save response is lost. Community and zone creation stay in the admin app. Account updates the address through the self-service membership endpoint; clearing it leaves onboarding complete.
+
+Session restoration checks onboarding before opening protected tabs or deep links. A failed status request displays a retry action. State is scoped to the API origin and signed-in account.
+
+## Generated API models
+
+Run from the repository root after changing a backend schema:
+
+```sh
+npm run mobile:generate
+```
+
+This exports the backend OpenAPI contracts, generates mobile TypeScript schemas with the existing Orval dependency, and generates community type labels from the same backend enum used by the admin app. Import models from `src/api/generated` and labels from `src/api/community-type-choices`; do not copy admin API models or edit generated files. Mobile requests continue using the authenticated application client. Orval receives an empty paths map and writes only models and an empty metadata file inside the generated directory. Cleanup is disabled so generation cannot remove application or native source files.
+
+From `apps/mobile`, `npm run generate` uses the already exported `docs/openapi/api.json`. CI regenerates those models and checks for changes; the backend/admin contract job also verifies OpenAPI and the shared community labels.
+
 ## Verification and maintenance
 
 ```sh
@@ -45,9 +65,9 @@ npx expo-doctor
 npx expo install --check
 ```
 
-CI checks lint/types, runs mobile authentication tests, and generates both Android and iOS production JavaScript bundles. Bundling does not prove a signed native build or device behaviour. Pre-commit checks mobile lint/types and authentication tests. The root pins the mobile-compatible React/React DOM pair so shared mobile libraries resolve the correct React instance; the admin workspace keeps its own React 19.3 pair. Root overrides keep Reanimated and Worklets on Expo-compatible versions. Upgrade SDKs deliberately, run Expo Doctor, regenerate both native projects, and smoke-test navigation, light/dark themes, large text, sessions, and deep links on both platforms.
+CI checks generated contracts, lint/types, runs mobile tests, and generates both Android and iOS production JavaScript bundles. Bundling does not prove a signed native build or device behaviour. Pre-commit checks mobile lint/types and tests. The root pins the mobile-compatible React/React DOM pair so shared mobile libraries resolve the correct React instance; the admin workspace keeps its own React 19.3 pair. Root overrides keep Reanimated and Worklets on Expo-compatible versions. Upgrade SDKs deliberately, run Expo Doctor, regenerate both native projects, and smoke-test navigation, light/dark themes, large text, sessions, and deep links on both platforms.
 
-Verify the phone login/register/logout loop on real devices, then implement community selection and resident ordering. Add API types from the mobile backend OpenAPI rather than copying admin contracts. Kitchen-owner capabilities must be authorized by the backend; community creation remains platform-admin only.
+Verify the phone login/register/logout and community onboarding loops on real devices, then implement resident ordering. Kitchen-owner capabilities must be authorized by the backend; community creation remains platform-admin only.
 
 ## Dependency audit limitation
 

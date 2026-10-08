@@ -1,5 +1,5 @@
 import { type PropsWithChildren } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Text, useTheme } from "react-native-paper";
 export function Screen({
@@ -13,20 +13,25 @@ export function Screen({
       edges={["top", "left", "right"]}
       style={[styles.page, { backgroundColor: theme.colors.background }]}
     >
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <View style={styles.content}>
-          <Text variant="labelLarge" style={{ color: theme.colors.primary }}>
-            HYPERLOCAL KITCHEN
-          </Text>
-          <Text variant="headlineLarge" accessibilityRole="header">
-            {title}
-          </Text>
-          <Text variant="bodyLarge" style={{ color: theme.colors.onSurfaceVariant }}>
-            {subtitle}
-          </Text>
-          {children}
-        </View>
-      </ScrollView>
+      <KeyboardAvoidingView
+        style={styles.page}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scroll}>
+          <View style={styles.content}>
+            <Text variant="labelLarge" style={{ color: theme.colors.primary }}>
+              HYPERLOCAL KITCHEN
+            </Text>
+            <Text variant="headlineLarge" accessibilityRole="header">
+              {title}
+            </Text>
+            <Text variant="bodyLarge" style={{ color: theme.colors.onSurfaceVariant }}>
+              {subtitle}
+            </Text>
+            {children}
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

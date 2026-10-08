@@ -28,6 +28,8 @@ from kitchen_core.catalog_schemas import (
     MembershipJoin,
     MembershipOut,
     MessageOut,
+    OnboardingComplete,
+    OnboardingState,
     PickupPointCreate,
     PickupPointOut,
     PickupPointUpdate,
@@ -89,6 +91,16 @@ def join(community_id: UUID, data: MembershipJoin, session: DB, user: Resident):
 @router.get("/me/communities", response_model=list[MembershipOut])
 def my_communities(session: DB, user: Resident, limit: Limit = 30, offset: Offset = 0):
     return catalog.my_memberships(session, user.id, limit, offset)
+
+
+@router.get("/me/onboarding", response_model=OnboardingState)
+def onboarding(session: DB, user: Resident):
+    return catalog.onboarding_state(session, user.id)
+
+
+@router.post("/me/onboarding", response_model=OnboardingState)
+def finish_onboarding(data: OnboardingComplete, session: DB, user: Resident):
+    return catalog.complete_onboarding(session, user, data)
 
 
 @router.post("/kitchens", response_model=KitchenOwnOut, status_code=201)

@@ -98,6 +98,15 @@ class MembershipOut(BaseModel):
     status: str
 
 
+class OnboardingComplete(MembershipJoin):
+    community_id: UUID
+
+
+class OnboardingState(BaseModel):
+    completed: bool
+    membership: MembershipOut | None = None
+
+
 class MembershipAdminOut(MembershipOut):
     user_name: str | None
     phone: str | None

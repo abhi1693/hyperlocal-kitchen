@@ -9,7 +9,7 @@ import {
 } from "react";
 import { AppState } from "react-native";
 import { useQueryClient } from "@tanstack/react-query";
-import { AuthError, type User } from "./client";
+import { AuthError, type ApiOptions, type User } from "./client";
 import { createNativeAuthClient } from "./native";
 
 function message(error: unknown): string {
@@ -18,6 +18,7 @@ function message(error: unknown): string {
     : "Sign-in could not be completed. Please try again.";
 }
 type AuthContextValue = {
+  origin: string | null;
   user: User | null;
   loading: boolean;
   busy: boolean;
@@ -25,6 +26,7 @@ type AuthContextValue = {
   signInWithPhone: (phone: string) => Promise<void>;
   signOut: () => Promise<void>;
   retry: () => Promise<void>;
+  api: <T>(path: string, options?: ApiOptions) => Promise<T>;
 };
 const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: PropsWithChildren) {
@@ -47,6 +49,25 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setUser(next);
     },
     [cache],
+  );
+  const api = useCallback(
+    async <T,>(path: string, options?: ApiOptions): Promise<T> => {
+      if (!client) throw new AuthError("Could not connect. Please try again.");
+      const current = revision.current;
+      try {
+        return await client.api<T>(path, options);
+      } catch (reason) {
+        if (reason instanceof AuthError && reason.status === 401 && current === revision.current) {
+          const next = await client.refresh();
+          if (current === revision.current && !next) {
+            revision.current += 1;
+            changeUser(null);
+          }
+        }
+        throw reason;
+      }
+    },
+    [changeUser, client],
   );
   useEffect(() => {
     let mounted = true;
@@ -101,6 +122,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
   return (
     <AuthContext.Provider
       value={{
+        origin: client?.origin ?? null,
+        api,
         user,
         loading,
         busy,

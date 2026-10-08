@@ -3,6 +3,7 @@ const TOKEN = /^[A-Za-z0-9_-]{43}$/;
 export const PHONE = /^\+[1-9][0-9]{7,14}$/;
 
 export type User = { id: string; name: string | null; phone: string | null };
+export type ApiOptions = { method?: "GET" | "POST" | "PATCH"; body?: unknown };
 export type AuthDependencies = {
   fetch: typeof fetch;
   get: (key: string) => Promise<string | null>;
@@ -78,31 +79,65 @@ export class AuthClient {
     return result;
   }
 
-  private async request(path: string, body?: unknown, token?: string): Promise<unknown> {
+  private request(path: string, body?: unknown, token?: string): Promise<unknown> {
+    return this.send(
+      "/api/v1/auth" + path,
+      { method: body === undefined ? "GET" : "POST", body },
+      token,
+      "Sign-in could not be completed. Please try again.",
+    );
+  }
+
+  private async send(
+    path: string,
+    options: ApiOptions,
+    token?: string,
+    fallback = "Could not complete the request. Please try again.",
+  ): Promise<unknown> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 20_000);
     try {
-      const response = await this.deps.fetch(this.origin + "/api/v1/auth" + path, {
-        method: body === undefined ? "GET" : "POST",
+      const response = await this.deps.fetch(this.origin + path, {
+        method: options.method ?? "GET",
         credentials: "omit",
         redirect: "error",
         headers: {
           Accept: "application/json",
-          ...(body === undefined ? {} : { "Content-Type": "application/json" }),
+          ...(options.body === undefined ? {} : { "Content-Type": "application/json" }),
           ...(token ? { Authorization: "Bearer " + token } : {}),
         },
-        body: body === undefined ? undefined : JSON.stringify(body),
+        body: options.body === undefined ? undefined : JSON.stringify(options.body),
         signal: controller.signal,
       });
+      // Native fetch redirect handling varies; never trust a foreign response origin.
+      if (response.url && new URL(response.url).origin !== this.origin)
+        throw new AuthError(fallback);
       if (!response.ok) {
-        throw new AuthError(
+        let message =
           response.status === 401
             ? "Please sign in again."
             : response.status === 503
-              ? "Sign-in is temporarily unavailable. Please try again."
-              : "Sign-in could not be completed. Please try again.",
-          response.status,
-        );
+              ? "The service is temporarily unavailable. Please try again."
+              : fallback;
+        if (response.status >= 400 && response.status < 500 && response.status !== 401) {
+          try {
+            const payload: unknown = await response.json();
+            if (payload && typeof payload === "object" && "detail" in payload) {
+              const detail = payload.detail;
+              if (
+                detail &&
+                typeof detail === "object" &&
+                "message" in detail &&
+                typeof detail.message === "string" &&
+                detail.message.trim() &&
+                detail.message.length <= 300
+              ) message = detail.message;
+            }
+          } catch {
+            // Invalid error bodies keep their HTTP status and a safe fallback.
+          }
+        }
+        throw new AuthError(message, response.status);
       }
       return response.status === 204 ? null : await response.json();
     } catch (error) {
@@ -110,6 +145,53 @@ export class AuthClient {
       throw new AuthError("Could not connect. Check your connection and try again.");
     } finally {
       clearTimeout(timer);
+    }
+  }
+
+  async api<T>(path: string, options: ApiOptions = {}): Promise<T> {
+    let destination: URL;
+    try {
+      destination = new URL(path, this.origin);
+    } catch {
+      throw new AuthError("Invalid API request.");
+    }
+    const method = options.method ?? "GET";
+    if (
+      !path.startsWith("/api/v1/") ||
+      path.includes("\\") ||
+      destination.origin !== this.origin ||
+      !destination.pathname.startsWith("/api/v1/") ||
+      destination.hash ||
+      destination.username ||
+      destination.password ||
+      !["GET", "POST", "PATCH"].includes(method) ||
+      (method === "GET" && options.body !== undefined)
+    ) throw new AuthError("Invalid API request.");
+    if (this.signingIn || this.signingOut)
+      throw new AuthError("Your session is changing. Please try again.");
+    const token = this.token;
+    if (!token) throw new AuthError("Please sign in again.", 401);
+    const changed = () => new AuthError("Your session changed. Please try again.");
+    try {
+      const result = await this.send(
+        destination.pathname + destination.search,
+        { ...options, method },
+        token,
+      );
+      if (token !== this.token || this.signingOut) throw changed();
+      return result as T;
+    } catch (error) {
+      if (token !== this.token || this.signingOut) throw changed();
+      if (error instanceof AuthError && error.status === 401) {
+        const cleared = await this.withStorage(async () => {
+          if (token !== this.token) return false;
+          await this.deps.remove(SESSION_KEY);
+          this.token = null;
+          return true;
+        });
+        if (!cleared) throw changed();
+      }
+      throw error;
     }
   }
 

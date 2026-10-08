@@ -14,6 +14,7 @@
     "mobile:start": "npm run start --workspace @kitchen/mobile --",
     "mobile:android": "npm run android --workspace @kitchen/mobile --",
     "mobile:ios": "npm run ios --workspace @kitchen/mobile --",
+    "mobile:generate": "uv run python scripts/export_openapi.py && npm run generate --workspace @kitchen/mobile",
     "mobile:typecheck": "npm run typecheck --workspace @kitchen/mobile --",
     "mobile:lint": "npm run lint --workspace @kitchen/mobile --",
     "mobile:export": "npm run export --workspace @kitchen/mobile --",

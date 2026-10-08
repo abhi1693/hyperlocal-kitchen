@@ -462,3 +462,208 @@ describe("native phone sign-in", () => {
     }
   });
 });
+
+describe("authenticated API requests", () => {
+  async function authenticated() {
+    const context = setup();
+    context.session();
+    context.fetchMock.mockResolvedValueOnce(response(USER));
+    await context.client.restore();
+    context.fetchMock.mockClear();
+    return context;
+  }
+
+  it("does not send requests without a verified session", async () => {
+    const { client, fetchMock } = setup();
+    await expect(client.api("/api/v1/me/onboarding")).rejects.toMatchObject({ status: 401 });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("sends origin-bound bearer requests to the general API namespace", async () => {
+    const { client, fetchMock } = await authenticated();
+    const result = { completed: false, membership: null };
+    fetchMock.mockResolvedValueOnce(response(result));
+    await expect(client.api<typeof result>("/api/v1/me/onboarding")).resolves.toEqual(result);
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${ORIGIN}/api/v1/me/onboarding`,
+      expect.objectContaining({
+        method: "GET",
+        credentials: "omit",
+        redirect: "error",
+        headers: { Accept: "application/json", Authorization: `Bearer ${TOKEN}` },
+        body: undefined,
+      }),
+    );
+  });
+
+  it("preserves encoded search parameters for community lookup", async () => {
+    const { client, fetchMock } = await authenticated();
+    const page = { items: [], total: 0, limit: 30, offset: 0 };
+    fetchMock.mockResolvedValueOnce(response(page));
+    await expect(client.api("/api/v1/communities?query=River%20Park&limit=30&offset=0")).resolves.toEqual(page);
+    expect(fetchMock.mock.calls[0][0]).toBe(`${ORIGIN}/api/v1/communities?query=River%20Park&limit=30&offset=0`);
+  });
+
+  it.each(["POST", "PATCH"] as const)("sends one %s mutation with a JSON body", async (method) => {
+    const { client, fetchMock } = await authenticated();
+    const body = { community_id: USER.id, zone_id: null, address_label: "Flat 101" };
+    fetchMock.mockResolvedValueOnce(response({ completed: true }));
+    await expect(client.api("/api/v1/me/onboarding", { method, body })).resolves.toEqual({ completed: true });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${ORIGIN}/api/v1/me/onboarding`,
+      expect.objectContaining({
+        method,
+        body: JSON.stringify(body),
+        headers: { Accept: "application/json", "Content-Type": "application/json", Authorization: `Bearer ${TOKEN}` },
+      }),
+    );
+  });
+
+  it.each([
+    "https://evil.example/api/v1/me/onboarding",
+    `${ORIGIN}/api/v1/me/onboarding`,
+    "//evil.example/api/v1/me/onboarding",
+    "/api/admin/users",
+    "/api/v1fake/me",
+    "/api/v1/../admin/users",
+    "/api/v1/%2e%2e/admin/users",
+    "/api/v1/\\evil.example",
+    "/api/v1/me/onboarding#fragment",
+  ])("rejects unsafe API destinations without sending the token: %s", async (path) => {
+    const { client, fetchMock } = await authenticated();
+    await expect(client.api(path)).rejects.toThrow("Invalid API request");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects an unsupported runtime method before sending a request", async () => {
+    const { client, fetchMock } = await authenticated();
+    // Exercise the runtime boundary in addition to the TypeScript contract.
+    await expect(client.api("/api/v1/me/onboarding", { method: "DELETE" as never })).rejects.toThrow("Invalid API request");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects bodies on GET requests", async () => {
+    const { client, fetchMock } = await authenticated();
+    await expect(client.api("/api/v1/me/onboarding", { body: { phone: PHONE } })).rejects.toThrow("Invalid API request");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("clears revoked current credentials after a general API 401", async () => {
+    const { client, fetchMock, storage } = await authenticated();
+    fetchMock.mockResolvedValueOnce(response({}, 401));
+    await expect(client.api("/api/v1/me/onboarding")).rejects.toMatchObject({ status: 401 });
+    expect(storage.has(SESSION_KEY)).toBe(false);
+    await expect(client.refresh()).resolves.toBeNull();
+    await expect(client.api("/api/v1/me/onboarding")).rejects.toMatchObject({ status: 401 });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps credentials and does not retry when a mutation loses connectivity", async () => {
+    const { client, fetchMock, storage } = await authenticated();
+    fetchMock.mockRejectedValueOnce(new Error("network failed"));
+    await expect(client.api("/api/v1/me/onboarding", { method: "POST", body: {} })).rejects.toThrow("Could not connect");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(storage.has(SESSION_KEY)).toBe(true);
+  });
+
+  it("preserves backend validation messages without retrying a rejected mutation", async () => {
+    const { client, fetchMock, storage } = await authenticated();
+    fetchMock.mockResolvedValueOnce(response({ detail: { code: "zone_mismatch", message: "Choose a zone from this community." } }, 422));
+    await expect(client.api("/api/v1/me/onboarding", { method: "POST", body: {} })).rejects.toMatchObject({
+      status: 422,
+      message: "Choose a zone from this community.",
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(storage.has(SESSION_KEY)).toBe(true);
+  });
+
+  it.each([{}, { detail: { message: 123 } }, { detail: { message: "x".repeat(301) } }])("uses a safe fallback for malformed error payloads: %j", async (body) => {
+    const { client, fetchMock } = await authenticated();
+    fetchMock.mockResolvedValueOnce(response(body, 409));
+    await expect(client.api("/api/v1/me/onboarding")).rejects.toMatchObject({
+      status: 409,
+      message: "Could not complete the request. Please try again.",
+    });
+  });
+
+  it("does not expose unexpected server error details", async () => {
+    const { client, fetchMock, storage } = await authenticated();
+    fetchMock.mockResolvedValueOnce(response({ detail: { message: "internal database diagnostic" } }, 500));
+    await expect(client.api("/api/v1/me/onboarding")).rejects.toMatchObject({
+      status: 500,
+      message: "Could not complete the request. Please try again.",
+    });
+    expect(storage.has(SESSION_KEY)).toBe(true);
+  });
+
+  it("does not trust a foreign response origin even if native fetch follows a redirect", async () => {
+    const { client, fetchMock, storage } = await authenticated();
+    fetchMock.mockResolvedValueOnce({ ...response({ completed: true }), url: "https://evil.example/api/v1/me/onboarding" });
+    await expect(client.api("/api/v1/me/onboarding")).rejects.toBeInstanceOf(AuthError);
+    expect(storage.has(SESSION_KEY)).toBe(true);
+  });
+
+  it.each([200, 401, 503])("discards an older account's response after a new login (HTTP %s)", async (status) => {
+    const { client, fetchMock, storage, issued } = await authenticated();
+    const oldResponse = deferred<Response>();
+    fetchMock.mockImplementationOnce(() => oldResponse.promise);
+    const request = client.api("/api/v1/me/onboarding");
+    const newToken = "n".repeat(43);
+    fetchMock.mockResolvedValueOnce(response({ phone_login_enabled: true }));
+    fetchMock.mockResolvedValueOnce(issued({ session_token: newToken }));
+    await client.signInWithPhone(PHONE);
+    oldResponse.resolve(response({ membership: { address_label: "Old private address" } }, status));
+
+    await expect(request).rejects.toMatchObject({ message: "Your session changed. Please try again.", status: undefined });
+    expect(JSON.parse(storage.get(SESSION_KEY)!)).toEqual({ origin: ORIGIN, token: newToken });
+  });
+
+  it("does not clear a newer session saved ahead of queued API 401 cleanup", async () => {
+    const { client, deps, fetchMock, storage, issued } = await authenticated();
+    const oldResponse = deferred<Response>();
+    fetchMock.mockImplementationOnce(() => oldResponse.promise);
+    const request = client.api("/api/v1/me/onboarding");
+    const write = deferred<void>();
+    deps.set.mockImplementationOnce(async (key, value) => {
+      await write.promise;
+      storage.set(key, value);
+    });
+    const newToken = "n".repeat(43);
+    fetchMock.mockResolvedValueOnce(response({ phone_login_enabled: true }));
+    fetchMock.mockResolvedValueOnce(issued({ session_token: newToken }));
+    const signingIn = client.signInWithPhone(PHONE);
+    while (deps.set.mock.calls.length === 0) await Promise.resolve();
+    oldResponse.resolve(response({}, 401));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(deps.remove).not.toHaveBeenCalled();
+    write.resolve(undefined);
+
+    await expect(signingIn).resolves.toEqual(USER);
+    await expect(request).rejects.toMatchObject({ message: "Your session changed. Please try again.", status: undefined });
+    expect(deps.remove).not.toHaveBeenCalled();
+    expect(JSON.parse(storage.get(SESSION_KEY)!)).toEqual({ origin: ORIGIN, token: newToken });
+  });
+
+  it("rejects requests while the session is being replaced", async () => {
+    const { client, fetchMock } = await authenticated();
+    const config = deferred<Response>();
+    fetchMock.mockImplementationOnce(() => config.promise);
+    const signingIn = client.signInWithPhone(PHONE);
+    await expect(client.api("/api/v1/me/onboarding")).rejects.toThrow("session is changing");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    config.resolve(response({ phone_login_enabled: false }));
+    await expect(signingIn).rejects.toBeInstanceOf(AuthError);
+  });
+
+  it("discards a response delivered after sign-out", async () => {
+    const { client, fetchMock } = await authenticated();
+    const oldResponse = deferred<Response>();
+    fetchMock.mockImplementationOnce(() => oldResponse.promise);
+    const request = client.api("/api/v1/me/onboarding");
+    fetchMock.mockResolvedValueOnce(response(null, 204));
+    await client.signOut();
+    oldResponse.resolve(response({ completed: true }));
+    await expect(request).rejects.toThrow("session changed");
+  });
+});
