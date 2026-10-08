@@ -32,6 +32,7 @@ x-oidc-environment: &oidc-environment
 
 x-user-auth-environment: &user-auth-environment
   KITCHEN_USER_OIDC_CLIENT_SECRET: ${KITCHEN_USER_OIDC_CLIENT_SECRET:-}
+  KITCHEN_DEVELOPMENT_PHONE_LOGIN: ${KITCHEN_DEVELOPMENT_PHONE_LOGIN:-false}
 
 x-backend: &backend
   <<: *runtime

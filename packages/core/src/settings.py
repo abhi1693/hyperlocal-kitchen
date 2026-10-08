@@ -11,6 +11,7 @@ class Settings(BaseSettings):
         env_prefix="KITCHEN_", env_file=".env", extra="ignore", hide_input_in_errors=True
     )
     environment: Literal["development", "test", "production"] = "production"
+    development_phone_login: bool = False
     database_url: str = "postgresql+psycopg://kitchen:kitchen@localhost:5432/kitchen"
     redis_url: str = "redis://localhost:6379/0"
     cors_origins: list[str] = []

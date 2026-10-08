@@ -20,6 +20,7 @@ def test_auth_config_lists_configured_social_providers(client, monkeypatch):
     assert client.get("/api/v1/auth/config").json() == {
         "enabled": True,
         "providers": ["google", "github"],
+        "phone_login_enabled": False,
     }
 
 

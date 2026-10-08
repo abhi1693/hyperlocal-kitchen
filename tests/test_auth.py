@@ -152,7 +152,8 @@ def complete(client, provider, kind="user", query=None):
 
 
 def test_unconfigured_auth_is_disabled_without_any_local_fallback(client, monkeypatch):
-    monkeypatch.delenv("KITCHEN_USER_OIDC_CLIENT_ID")
+    # Empty explicitly overrides a resident client configured in a developer's .env.
+    monkeypatch.setenv("KITCHEN_USER_OIDC_CLIENT_ID", "")
     get_settings.cache_clear()
     assert client.get("/api/v1/auth/config").json()["enabled"] is False
     assert client.get("/api/v1/auth/login").status_code == 503

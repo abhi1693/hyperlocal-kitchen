@@ -45,6 +45,7 @@ jobs:
       - run: npm ci
       - run: npm run mobile:lint
       - run: npm run mobile:typecheck
+      - run: npm run mobile:test
       - run: npm run mobile:export
   security:
     uses: ./.github/workflows/security.yml

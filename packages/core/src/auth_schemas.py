@@ -16,6 +16,7 @@ class UserIdentity(BaseModel):
 class AuthConfig(BaseModel):
     enabled: bool
     providers: list[Literal["google", "github"]] = []
+    phone_login_enabled: bool = False
 
 
 class AdminPrincipal(BaseModel):
@@ -58,6 +59,11 @@ class MobileStart(BaseModel):
 
 class MobileStartResult(BaseModel):
     authorization_url: str
+
+
+class DevelopmentPhoneLogin(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    phone: str = Field(pattern=r"^\+[1-9][0-9]{7,14}$")
 
 
 class MobileExchange(BaseModel):

@@ -10940,6 +10940,11 @@
             "type": "array",
             "title": "Providers",
             "default": []
+          },
+          "phone_login_enabled": {
+            "type": "boolean",
+            "title": "Phone Login Enabled",
+            "default": false
           }
         },
         "type": "object",

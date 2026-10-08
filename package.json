@@ -17,7 +17,8 @@
     "mobile:typecheck": "npm run typecheck --workspace @kitchen/mobile --",
     "mobile:lint": "npm run lint --workspace @kitchen/mobile --",
     "mobile:export": "npm run export --workspace @kitchen/mobile --",
-    "mobile:prebuild": "npm run prebuild --workspace @kitchen/mobile --"
+    "mobile:prebuild": "npm run prebuild --workspace @kitchen/mobile --",
+    "mobile:test": "npm run test --workspace @kitchen/mobile --"
   },
   "engines": {
     "node": ">=22.13"

@@ -46,3 +46,9 @@ repos:
         language: system
         pass_filenames: false
         files: ^(apps/mobile/|package(-lock)?\.json$|\.pre-commit-config\.yaml$)
+      - id: mobile-tests
+        name: Mobile authentication tests
+        entry: npm run mobile:test
+        language: system
+        pass_filenames: false
+        files: ^(apps/mobile/|package(-lock)?\.json$|\.pre-commit-config\.yaml$)

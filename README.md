@@ -553,4 +553,4 @@ Nested local `.env` files are excluded from every Docker build context.
 
 ## Mobile app
 
-The Android/iOS Expo app lives in `apps/mobile`. It currently provides a themed navigation shell; login and ordering are not connected yet. See [mobile setup and stack decisions](apps/mobile/README.md) for development builds, checks, and maintenance.
+The Android/iOS Expo app lives in `apps/mobile`. It opens with a name splash and offers a custom phone login/register page. OTP is temporarily skipped only when development phone login is enabled. Ordering screens are still being built. See [mobile setup and stack decisions](apps/mobile/README.md) for development builds, checks, and maintenance.

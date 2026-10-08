@@ -15,6 +15,7 @@ from kitchen_core.auth_schemas import (
     AdminPrincipal,
     AuthConfig,
     CallbackQuery,
+    DevelopmentPhoneLogin,
     MobileExchange,
     MobileSessionResult,
     MobileStart,
@@ -55,13 +56,17 @@ def build_auth_router(kind: auth.Kind) -> APIRouter:
     def config() -> AuthConfig:
         settings = get_settings()
         providers = []
-        if auth.configured(kind):
+        if auth.oidc_configured(kind):
             providers = [
                 provider
                 for provider in ("google", "github")
                 if getattr(settings, f"oidc_{provider}_idp_id")
             ]
-        return AuthConfig(enabled=auth.configured(kind), providers=providers)
+        return AuthConfig(
+            enabled=auth.configured(kind),
+            providers=providers,
+            phone_login_enabled=auth.development_phone_login_enabled(kind),
+        )
 
     @router.get("/login", status_code=302, response_class=RedirectResponse)
     def login(
@@ -70,7 +75,7 @@ def build_auth_router(kind: auth.Kind) -> APIRouter:
         provider: Literal["google", "github"] | None = None,
         mobile_request: str | None = None,
     ) -> RedirectResponse:
-        auth.require_config(kind)
+        auth.require_oidc_config(kind)
         try:
             location, flow = auth.start(
                 kind, register=register, reauthenticate=reauthenticate, provider=provider
@@ -101,7 +106,7 @@ def build_auth_router(kind: auth.Kind) -> APIRouter:
     def callback(
         request: Request, params: Annotated[CallbackQuery, Query()], session: DB
     ) -> RedirectResponse:
-        auth.require_config(kind)
+        auth.require_oidc_config(kind)
         settings = get_settings()
         bound_flow = False
         native_flow = False
@@ -201,7 +206,7 @@ def build_auth_router(kind: auth.Kind) -> APIRouter:
 
         @router.post("/mobile/start", response_model=MobileStartResult)
         def mobile_start(body: MobileStart) -> MobileStartResult:
-            auth.require_config("user")
+            auth.require_oidc_config("user")
             request_id = secrets.token_urlsafe(32)
             try:
                 auth.get_redis().set(
@@ -226,7 +231,7 @@ def build_auth_router(kind: auth.Kind) -> APIRouter:
 
         @router.post("/mobile/exchange", response_model=MobileSessionResult)
         def mobile_exchange(body: MobileExchange, session: DB) -> MobileSessionResult:
-            auth.require_config("user")
+            auth.require_oidc_config("user")
             try:
                 redis = auth.get_redis()
                 handoff_key = auth.key("user", "handoff", body.code)
@@ -256,5 +261,31 @@ def build_auth_router(kind: auth.Kind) -> APIRouter:
                 ) from exc
             except (ValueError, KeyError, TypeError, oidc.OIDCError) as exc:
                 raise DomainError(401, "invalid_handoff", "Please start sign-in again") from exc
+
+        @router.post("/mobile/phone", response_model=MobileSessionResult)
+        def development_phone_login(
+            body: DevelopmentPhoneLogin, session: DB
+        ) -> MobileSessionResult:
+            record = auth.development_phone_identity(body.phone)
+            try:
+                user = auth.save_user(session, record)
+                token = auth.create_session("user", record, transport="bearer")
+                return MobileSessionResult(
+                    session_token=token,
+                    expires_at=record["expires_at"],
+                    user=UserIdentity.model_validate(user),
+                )
+            except oidc.OIDCError as exc:
+                raise DomainError(
+                    401, "account_unavailable", "This account is unavailable"
+                ) from exc
+            except RedisError as exc:
+                raise DomainError(
+                    503, "sessions_unavailable", "Sign-in sessions temporarily unavailable"
+                ) from exc
+            except SQLAlchemyError as exc:
+                raise DomainError(
+                    503, "accounts_unavailable", "Sign-in accounts temporarily unavailable"
+                ) from exc
 
     return router

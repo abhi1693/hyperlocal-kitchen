@@ -60,14 +60,32 @@ def provider_settings(kind: Kind) -> ProviderSettings:
     )
 
 
-def configured(kind: Kind) -> bool:
+def development_phone_login_enabled(kind: Kind) -> bool:
+    settings = get_settings()
+    return (
+        kind == "user"
+        and settings.environment == "development"
+        and settings.development_phone_login
+    )
+
+
+def oidc_configured(kind: Kind) -> bool:
     return oidc.configured(
         provider_settings(kind), base_url=getattr(get_settings(), f"{kind}_base_url")
     )
 
 
+def configured(kind: Kind) -> bool:
+    return development_phone_login_enabled(kind) or oidc_configured(kind)
+
+
 def require_config(kind: Kind) -> None:
     if not configured(kind):
+        raise DomainError(503, "auth_not_configured", "Zitadel sign-in is not configured")
+
+
+def require_oidc_config(kind: Kind) -> None:
+    if not oidc_configured(kind):
         raise DomainError(503, "auth_not_configured", "Zitadel sign-in is not configured")
 
 
@@ -98,6 +116,8 @@ def policy_key(kind: Kind) -> str:
     if kind == "admin":
         values["admin_required_role"] = settings.admin_required_role
     values["authorization_policy_version"] = f"zitadel-{kind}-v1"
+    values["environment"] = settings.environment
+    values["development_phone_login_enabled"] = development_phone_login_enabled(kind)
     return hashlib.sha256(json.dumps(values, sort_keys=True).encode()).hexdigest()
 
 
@@ -107,12 +127,12 @@ def redirect_uri(kind: Kind) -> str:
 
 
 def discovery(kind: Kind) -> dict:
-    require_config(kind)
+    require_oidc_config(kind)
     return oidc.discovery(provider_settings(kind))
 
 
 def start(kind: Kind, *, register=False, reauthenticate=False, provider=None) -> tuple[str, dict]:
-    require_config(kind)
+    require_oidc_config(kind)
     settings = get_settings()
     provider_id = getattr(settings, f"oidc_{provider}_idp_id") if provider else None
     if provider and not provider_id:
@@ -131,6 +151,25 @@ def start(kind: Kind, *, register=False, reauthenticate=False, provider=None) ->
             else None
         ),
     )
+
+
+def development_phone_identity(phone: str) -> dict:
+    """An explicitly enabled local bypass; this does not verify phone ownership."""
+    if not development_phone_login_enabled("user"):
+        raise DomainError(503, "auth_not_configured", "Phone sign-in is not enabled")
+    settings = get_settings()
+    now = int(time.time())
+    return {
+        "subject": "development-phone:" + hashlib.sha256(phone.encode()).hexdigest(),
+        "issuer": "urn:kitchen:development:phone",
+        "organization_id": "development",
+        "phone": phone,
+        "expires_at": now + settings.user_session_ttl_seconds,
+        "absolute_expires_at": now + settings.user_session_absolute_ttl_seconds,
+        "renewed_at": now,
+        "policy": policy_key("user"),
+        "csrf_token": secrets.token_urlsafe(32),
+    }
 
 
 def verified_roles(id_claims: dict, userinfo: dict) -> list[str]:

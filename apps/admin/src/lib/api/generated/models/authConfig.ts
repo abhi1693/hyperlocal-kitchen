@@ -9,4 +9,5 @@ import type { AuthConfigProvidersItem } from './authConfigProvidersItem';
 export interface AuthConfig {
   enabled: boolean;
   providers?: AuthConfigProvidersItem[];
+  phone_login_enabled?: boolean;
 }

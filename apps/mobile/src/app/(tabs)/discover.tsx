@@ -12,11 +12,10 @@ export default function DiscoverScreen() {
           <Icon source="home-heart" size={48} />
           <Text variant="titleLarge">Your neighbourhood, your table</Text>
           <Text variant="bodyMedium">
-            Your community’s kitchens and daily menus will appear here once you sign in and choose a
-            community.
+            Your community’s kitchens and daily menus will appear here once you choose a community.
           </Text>
           <Button mode="contained" onPress={() => router.navigate("/account")}>
-            Go to account
+            Your account
           </Button>
         </Card.Content>
       </Card>
