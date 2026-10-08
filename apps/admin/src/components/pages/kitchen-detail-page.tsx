@@ -191,7 +191,9 @@ export function KitchenDetailPage({ id }: { id: string }) {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base">Menu for {date}</CardTitle>
-          <FormLink href={`/kitchens/${id}/listings/new?date=${date}`}>Publish listing</FormLink>
+          <FormLink href={`/kitchens/${id}/listings/new?date=${encodeURIComponent(date)}`}>
+            Publish listing
+          </FormLink>
         </CardHeader>
         <CardContent className="space-y-4">
           <QueryState
@@ -287,7 +289,7 @@ export function KitchenDetailPage({ id }: { id: string }) {
                       <div className="flex flex-wrap gap-2">
                         {row.is_active && (
                           <FormLink
-                            href={`/kitchens/${id}/listings/new?dish_id=${row.id}&date=${date}`}
+                            href={`/kitchens/${id}/listings/new?dish_id=${row.id}&date=${encodeURIComponent(date)}`}
                           >
                             Cook again
                           </FormLink>
