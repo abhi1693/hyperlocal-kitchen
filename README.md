@@ -1,6 +1,12 @@
 # Hyperlocal Kitchen
 
 FastAPI backend for a private hyperlocal food marketplace for communities.
+Each user can own at most one kitchen across all communities, including pending and
+suspended kitchens. Managers can help operate other kitchens. Ownership creation and
+assignment are protected by a database constraint. Before applying migration
+`0008_single_kitchen_owner`, resolve any users with multiple owner memberships; the
+migration rejects duplicates without changing ownership automatically.
+
 Members and kitchen owners share one account and one mobile API. Platform administration has
 a separate API and Zitadel application. The admin web app lives in `apps/admin`; the mobile UI comes next.
 

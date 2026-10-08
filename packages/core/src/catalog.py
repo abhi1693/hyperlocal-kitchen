@@ -453,8 +453,21 @@ def set_membership_status(session: Session, membership_id: UUID, status: str) ->
     return membership_view(session, membership, admin=True)
 
 
+def require_available_kitchen_ownership(
+    session: Session, user_id: UUID, kitchen_id: UUID | None = None
+) -> None:
+    ownership = select(KitchenMember.kitchen_id).where(
+        KitchenMember.user_id == user_id, KitchenMember.role == "owner"
+    )
+    if kitchen_id is not None:
+        ownership = ownership.where(KitchenMember.kitchen_id != kitchen_id)
+    if session.scalar(ownership.limit(1)) is not None:
+        raise DomainError(409, "kitchen_exists", "You already own a kitchen.")
+
+
 def create_kitchen(session: Session, user: User, data: KitchenCreate) -> KitchenOwnOut:
     user = _locked_active_user(session, user.id)
+    require_available_kitchen_ownership(session, user.id)
     require_active_community(session, data.community_id)
     membership = require_membership(session, user.id, data.community_id)
     existing = session.scalar(

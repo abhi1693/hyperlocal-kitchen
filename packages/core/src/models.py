@@ -30,6 +30,7 @@ from sqlalchemy import (
     and_,
     or_,
     select,
+    text,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, foreign, mapped_column, relationship
 
@@ -252,7 +253,16 @@ class KitchenMember(Base):
     kitchen_id: Mapped[UUID] = mapped_column(ForeignKey("kitchens.id"), primary_key=True)
     user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"), primary_key=True)
     role: Mapped[str] = mapped_column(String(20), default="owner")
-    __table_args__ = (CheckConstraint("role IN ('owner','manager')"),)
+    __table_args__ = (
+        CheckConstraint("role IN ('owner','manager')"),
+        Index(
+            "uq_kitchen_members_owner_user_id",
+            "user_id",
+            unique=True,
+            postgresql_where=text("role = 'owner'"),
+            sqlite_where=text("role = 'owner'"),
+        ),
+    )
 
     user: Mapped[User] = relationship(back_populates="kitchen_memberships")
     kitchen: Mapped[Kitchen] = relationship(back_populates="memberships")

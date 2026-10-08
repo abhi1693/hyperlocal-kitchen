@@ -7,7 +7,7 @@ from time import monotonic
 
 import pytest
 from kitchen_core import catalog
-from kitchen_core.catalog_schemas import MembershipJoin
+from kitchen_core.catalog_schemas import KitchenCreate, MembershipJoin
 from kitchen_core.errors import DomainError
 from kitchen_core.models import (
     Community,
@@ -645,3 +645,53 @@ def test_dish_photos_require_valid_https_urls(client, market, image_url):
     assert response.status_code == 422
     response = client.patch(f"/api/v1/dishes/{market['dish'].id}", json={"image_url": image_url})
     assert response.status_code == 422
+
+
+@pytest.mark.parametrize("status", ["pending", "approved", "suspended"])
+@pytest.mark.parametrize("different_community", [False, True])
+def test_owner_cannot_create_another_kitchen(client, session, market, status, different_community):
+    owner = market["owner"]
+    market["kitchen"].status = status
+    community = market["other"] if different_community else market["community"]
+    if different_community:
+        session.add(Membership(user_id=owner.id, community_id=community.id, status="active"))
+    session.commit()
+    as_user(client, owner)
+    response = client.post(
+        "/api/v1/kitchens", json={"community_id": str(community.id), "name": "Second Kitchen"}
+    )
+    assert response.status_code == 409, response.text
+    assert response.json()["detail"]["code"] == "kitchen_exists"
+    assert session.scalar(select(func.count()).select_from(Kitchen)) == 1
+
+
+def test_concurrent_creation_allows_only_one_owned_kitchen(session, session_factory, market):
+    user = market["customer"]
+    session.add(Membership(user_id=user.id, community_id=market["other"].id, status="active"))
+    session.commit()
+
+    def create(community_id):
+        with session_factory() as request_session:
+            try:
+                result = catalog.create_kitchen(
+                    request_session,
+                    user,
+                    KitchenCreate(community_id=community_id, name="New Kitchen"),
+                )
+                request_session.commit()
+                return result.id
+            except DomainError as error:
+                request_session.rollback()
+                return error.code
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(create, [market["community"].id, market["other"].id]))
+    assert results.count("kitchen_exists") == 1
+    assert (
+        session.scalar(
+            select(func.count())
+            .select_from(KitchenMember)
+            .where(KitchenMember.user_id == user.id, KitchenMember.role == "owner")
+        )
+        == 1
+    )

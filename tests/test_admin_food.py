@@ -508,3 +508,51 @@ def test_listing_cancellation_available_after_pause_suspend_or_fulfillment_chang
     assert admin_client.delete(f"/api/v1/menu-listings/{admin_listing['id']}").status_code == 204
     # Unavailability still prevents publishing; cancellation is the only relaxed action.
     assert admin_client.post(path + "/menu-listings", json=listing_data(market)).status_code == 409
+
+
+def test_admin_cannot_assign_second_kitchen_ownership(admin_client, session, food_market):
+    market = food_market
+    owner = market["owner"]
+    other = market["other_kitchen"]
+    session.add(Membership(user_id=owner.id, community_id=other.community_id, status="active"))
+    session.commit()
+    response = admin_client.post(
+        "/api/v1/kitchens",
+        json={
+            "owner_user_id": str(owner.id),
+            "community_id": str(other.community_id),
+            "name": "Second Kitchen",
+        },
+    )
+    assert response.status_code == 409, response.text
+    path = f"/api/v1/kitchens/{other.id}/members"
+    response = admin_client.post(path, json={"user_id": str(owner.id), "role": "owner"})
+    assert response.status_code == 409, response.text
+    # Managers can help another kitchen, but cannot acquire a second ownership.
+    response = admin_client.post(path, json={"user_id": str(owner.id), "role": "manager"})
+    assert response.status_code == 201, response.text
+    response = admin_client.patch(f"{path}/{owner.id}", json={"role": "owner"})
+    assert response.status_code == 409, response.text
+    assert (
+        admin_client.patch(
+            f"/api/v1/kitchens/{market['kitchen'].id}/members/{owner.id}",
+            json={"role": "owner"},
+        ).status_code
+        == 200
+    )
+
+
+def test_database_rejects_second_ownership_but_allows_management(session, food_market):
+    from sqlalchemy.exc import IntegrityError
+
+    market = food_market
+    member = KitchenMember(
+        kitchen_id=market["other_kitchen"].id, user_id=market["owner"].id, role="manager"
+    )
+    session.add(member)
+    session.commit()
+    with pytest.raises(IntegrityError, match="uq_kitchen_members_owner_user_id"):
+        member.role = "owner"
+        session.flush()
+    session.rollback()
+    assert session.get(KitchenMember, (member.kitchen_id, member.user_id)).role == "manager"

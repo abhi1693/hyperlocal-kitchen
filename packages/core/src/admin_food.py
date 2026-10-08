@@ -125,7 +125,9 @@ def create_member(
     catalog.require_membership(session, data.user_id, kitchen.community_id)
     if session.get(KitchenMember, (kitchen_id, data.user_id)) is not None:
         raise DomainError(409, "member_exists", "This user already manages the kitchen.")
-    if data.role != "owner":
+    if data.role == "owner":
+        catalog.require_available_kitchen_ownership(session, data.user_id, kitchen_id)
+    else:
         _require_remaining_owner(session, kitchen, data.user_id)
     member = KitchenMember(kitchen_id=kitchen_id, user_id=data.user_id, role=data.role)
     session.add(member)
@@ -142,7 +144,9 @@ def update_member(
     member = session.get(KitchenMember, (kitchen_id, user_id))
     if member is None:
         raise DomainError(404, "not_found", "Kitchen member was not found.")
-    if data.role != "owner":
+    if data.role == "owner":
+        catalog.require_available_kitchen_ownership(session, user_id, kitchen_id)
+    else:
         _require_remaining_owner(session, kitchen, user_id)
     member.role = data.role
     session.flush()
