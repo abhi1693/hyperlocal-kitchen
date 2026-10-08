@@ -16,7 +16,7 @@ Research: [React Native framework recommendation](https://reactnative.dev/blog/2
 
 ## Run locally
 
-From the repository root:
+Run these commands from the repository root:
 
 ```sh
 npm ci
@@ -26,6 +26,8 @@ npm run mobile:ios
 # After installing a development build on your phone/emulator:
 npm run mobile:start
 ```
+
+The `mobile:*` commands also work from `apps/mobile`. In that directory, the shorter `npm run android`, `npm run ios`, and `npm run start` commands are equivalent. Extra CLI arguments are supported, for example `npm run mobile:android -- --device`.
 
 Android requires Android Studio/SDK and a JDK supported by this Expo release. iOS compilation requires macOS/Xcode. `run:android` and `run:ios` generate and compile the respective native project. Physical devices need a reachable LAN API address when API integration is added; Android emulator uses `10.0.2.2` for the host. `.env.example` is a template for that future integration, not a live connection in this scaffold. Public Expo environment variables must never contain secrets.
 

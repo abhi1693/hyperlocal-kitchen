@@ -11,13 +11,13 @@
     "admin:start": "npm run start --workspace @kitchen/admin",
     "admin:generate": "uv run python scripts/export_openapi.py && npm run generate --workspace @kitchen/admin",
     "admin:typecheck": "npm run typecheck --workspace @kitchen/admin",
-    "mobile:start": "npm run start --workspace @kitchen/mobile",
-    "mobile:android": "npm run android --workspace @kitchen/mobile",
-    "mobile:ios": "npm run ios --workspace @kitchen/mobile",
-    "mobile:typecheck": "npm run typecheck --workspace @kitchen/mobile",
-    "mobile:lint": "npm run lint --workspace @kitchen/mobile",
-    "mobile:export": "npm run export --workspace @kitchen/mobile",
-    "mobile:prebuild": "npm run prebuild --workspace @kitchen/mobile"
+    "mobile:start": "npm run start --workspace @kitchen/mobile --",
+    "mobile:android": "npm run android --workspace @kitchen/mobile --",
+    "mobile:ios": "npm run ios --workspace @kitchen/mobile --",
+    "mobile:typecheck": "npm run typecheck --workspace @kitchen/mobile --",
+    "mobile:lint": "npm run lint --workspace @kitchen/mobile --",
+    "mobile:export": "npm run export --workspace @kitchen/mobile --",
+    "mobile:prebuild": "npm run prebuild --workspace @kitchen/mobile --"
   },
   "engines": {
     "node": ">=22.13"

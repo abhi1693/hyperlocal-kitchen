@@ -35,7 +35,14 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "export": "expo export --platform android --platform ios --output-dir dist",
-    "prebuild": "expo prebuild"
+    "prebuild": "expo prebuild",
+    "mobile:start": "npm run start --",
+    "mobile:android": "npm run android --",
+    "mobile:ios": "npm run ios --",
+    "mobile:typecheck": "npm run typecheck --",
+    "mobile:lint": "npm run lint --",
+    "mobile:export": "npm run export --",
+    "mobile:prebuild": "npm run prebuild --"
   },
   "private": true
 }
