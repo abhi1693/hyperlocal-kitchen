@@ -2,6 +2,7 @@
 
 import hmac
 import json
+import logging
 import secrets
 import time
 from typing import Annotated, Literal, cast
@@ -31,6 +32,8 @@ from kitchen_http.auth import (
 )
 from redis.exceptions import RedisError
 from sqlalchemy.exc import SQLAlchemyError
+
+logger = logging.getLogger(__name__)
 
 
 def cookie(response: Response, kind: auth.Kind, cookie_type: str, value: str, ttl: int) -> None:
@@ -146,7 +149,17 @@ def build_auth_router(kind: auth.Kind) -> APIRouter:
                 response = RedirectResponse(origin + ("/start" if kind == "admin" else "/"), 302)
                 ttl = record.get("absolute_expires_at", record["expires_at"]) - int(time.time())
                 cookie(response, kind, "session", token, ttl)
-        except (oidc.OIDCError, RedisError, SQLAlchemyError, ValueError, KeyError, TypeError):
+        except (
+            oidc.OIDCError,
+            RedisError,
+            SQLAlchemyError,
+            ValueError,
+            KeyError,
+            TypeError,
+        ) as exc:
+            # OIDCError messages are fixed local strings; other errors may contain secrets.
+            reason = str(exc) if isinstance(exc, oidc.OIDCError) else type(exc).__name__
+            logger.warning("%s sign-in callback failed: %s", kind, reason)
             session.rollback()
             if bound_flow and native_flow:
                 destination = settings.mobile_redirect_uri + "?error=login_failed"
