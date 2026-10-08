@@ -539,7 +539,7 @@ describe("authenticated API requests", () => {
   it("rejects an unsupported runtime method before sending a request", async () => {
     const { client, fetchMock } = await authenticated();
     // Exercise the runtime boundary in addition to the TypeScript contract.
-    await expect(client.api("/api/v1/me/onboarding", { method: "DELETE" as never })).rejects.toThrow("Invalid API request");
+    await expect(client.api("/api/v1/me/onboarding", { method: "PUT" as never })).rejects.toThrow("Invalid API request");
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -557,6 +557,32 @@ describe("authenticated API requests", () => {
     await expect(client.refresh()).resolves.toBeNull();
     await expect(client.api("/api/v1/me/onboarding")).rejects.toMatchObject({ status: 401 });
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("archives a dish with one authenticated DELETE and no body", async () => {
+    const { client, fetchMock } = await authenticated();
+    const result = { message: "Dish archived." };
+    fetchMock.mockResolvedValueOnce(response(result));
+    await expect(client.api("/api/v1/dishes/" + USER.id, { method: "DELETE" })).resolves.toEqual(
+      result,
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith(
+      ORIGIN + "/api/v1/dishes/" + USER.id,
+      expect.objectContaining({
+        method: "DELETE",
+        body: undefined,
+        headers: { Accept: "application/json", Authorization: "Bearer " + TOKEN },
+      }),
+    );
+  });
+
+  it("rejects DELETE bodies without sending credentials", async () => {
+    const { client, fetchMock } = await authenticated();
+    await expect(
+      client.api("/api/v1/dishes/" + USER.id, { method: "DELETE", body: {} }),
+    ).rejects.toThrow("Invalid API request");
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("keeps credentials and does not retry when a mutation loses connectivity", async () => {

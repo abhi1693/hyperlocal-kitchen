@@ -55,6 +55,13 @@ class User(Entity, Base):
     phone: Mapped[str | None] = mapped_column(String(20))
     name: Mapped[str | None] = mapped_column(String(120))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    preferred_mode: Mapped[str | None] = mapped_column(String(20))
+    __table_args__ = (
+        CheckConstraint(
+            "preferred_mode IS NULL OR preferred_mode IN ('customer','kitchen_owner')",
+            name="users_preferred_mode_check",
+        ),
+    )
 
     memberships: Mapped[list[Membership]] = relationship(
         back_populates="user", passive_deletes="all"

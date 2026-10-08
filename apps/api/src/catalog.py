@@ -15,6 +15,8 @@ from kitchen_core.catalog_schemas import (
     DishCreate,
     DishOut,
     DishUpdate,
+    ExperienceState,
+    ExperienceUpdate,
     KitchenCreate,
     KitchenOut,
     KitchenOwnOut,
@@ -101,6 +103,16 @@ def onboarding(session: DB, user: Resident):
 @router.post("/me/onboarding", response_model=OnboardingState)
 def finish_onboarding(data: OnboardingComplete, session: DB, user: Resident):
     return catalog.complete_onboarding(session, user, data)
+
+
+@router.get("/me/experience", response_model=ExperienceState)
+def experience(session: DB, user: Resident):
+    return catalog.experience_state(session, user.id)
+
+
+@router.patch("/me/experience", response_model=ExperienceState)
+def choose_experience(data: ExperienceUpdate, session: DB, user: Resident):
+    return catalog.update_experience(session, user, data)
 
 
 @router.post("/kitchens", response_model=KitchenOwnOut, status_code=201)
@@ -274,7 +286,7 @@ def create_pickup_point(kitchen_id: UUID, data: PickupPointCreate, session: DB, 
 def edit_pickup_point(
     kitchen_id: UUID, point_id: UUID, data: PickupPointUpdate, session: DB, user: Resident
 ):
-    catalog.require_kitchen_member(session, user.id, kitchen_id)
+    catalog._require_kitchen_mutation(session, user.id, kitchen_id)
     return pickup_points.update_point(session, point_id, data, kitchen_id=kitchen_id)
 
 

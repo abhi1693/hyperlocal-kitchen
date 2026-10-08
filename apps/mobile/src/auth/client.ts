@@ -3,7 +3,7 @@ const TOKEN = /^[A-Za-z0-9_-]{43}$/;
 export const PHONE = /^\+[1-9][0-9]{7,14}$/;
 
 export type User = { id: string; name: string | null; phone: string | null };
-export type ApiOptions = { method?: "GET" | "POST" | "PATCH"; body?: unknown };
+export type ApiOptions = { method?: "GET" | "POST" | "PATCH" | "DELETE"; body?: unknown };
 export type AuthDependencies = {
   fetch: typeof fetch;
   get: (key: string) => Promise<string | null>;
@@ -131,7 +131,8 @@ export class AuthClient {
                 typeof detail.message === "string" &&
                 detail.message.trim() &&
                 detail.message.length <= 300
-              ) message = detail.message;
+              )
+                message = detail.message;
             }
           } catch {
             // Invalid error bodies keep their HTTP status and a safe fallback.
@@ -164,9 +165,10 @@ export class AuthClient {
       destination.hash ||
       destination.username ||
       destination.password ||
-      !["GET", "POST", "PATCH"].includes(method) ||
-      (method === "GET" && options.body !== undefined)
-    ) throw new AuthError("Invalid API request.");
+      !["GET", "POST", "PATCH", "DELETE"].includes(method) ||
+      ((method === "GET" || method === "DELETE") && options.body !== undefined)
+    )
+      throw new AuthError("Invalid API request.");
     if (this.signingIn || this.signingOut)
       throw new AuthError("Your session is changing. Please try again.");
     const token = this.token;

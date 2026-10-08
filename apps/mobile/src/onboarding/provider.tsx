@@ -63,7 +63,9 @@ export function OnboardingProvider({ children }: PropsWithChildren) {
         throw new AuthError("Your session changed. Please try again.");
       return { state: result, identity, key };
     },
-    onSuccess: (result) => {
+    onSuccess: async (result) => {
+      if (currentIdentity.current !== result.identity) return;
+      await cache.cancelQueries({ queryKey: result.key, exact: true });
       if (currentIdentity.current === result.identity) cache.setQueryData(result.key, result.state);
     },
   });
@@ -84,7 +86,9 @@ export function OnboardingProvider({ children }: PropsWithChildren) {
         key,
       };
     },
-    onSuccess: (result) => {
+    onSuccess: async (result) => {
+      if (currentIdentity.current !== result.identity) return;
+      await cache.cancelQueries({ queryKey: result.key, exact: true });
       if (currentIdentity.current === result.identity) cache.setQueryData(result.key, result.state);
     },
   });

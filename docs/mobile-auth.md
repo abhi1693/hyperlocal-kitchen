@@ -90,6 +90,58 @@ onboarding is complete. Community and zone creation remain platform-admin
 operations. Onboarding belongs to the backend account and persists across
 reinstallations; the app does not use a device-only first-launch flag.
 
+## Choose meals or your kitchen
+
+After community onboarding, the app loads `GET /api/v1/me/experience`. Its
+response contains `mode` (`customer`, `kitchen_owner`, or `null`) and
+`owned_kitchen` (the account's kitchen or `null`). A new account chooses how to
+use the app. The selection is saved through:
+
+```http
+PATCH /api/v1/me/experience
+Authorization: Bearer <session_token>
+Content-Type: application/json
+```
+
+```json
+{"mode": "kitchen_owner"}
+```
+
+Use `customer` for the meals experience. Account can switch modes later, and the
+server preserves the preference across sessions and devices. An existing owner
+without a saved preference defaults to the kitchen experience. An owner can also
+use customer mode without losing their kitchen. Loading errors offer a retry;
+protected routes wait for the server response.
+
+The mode is a navigation preference. It does not grant a kitchen relationship
+or platform-admin access. The API authorizes every kitchen operation using the
+actual account and its kitchen membership, and prevents owning a second kitchen.
+
+## Kitchen setup and menus
+
+Kitchen mode opens the workspace for the account's owned kitchen, or offers
+setup when there is none. Creation uses a joined community and creates a kitchen
+awaiting platform-admin approval. A kitchen address is optional: omitting a new
+address inherits any existing community-onboarding address, and a user without
+either address can still create their profile. Profile edits can later add or
+clear the address. Pickup points require their own real address before meals can
+offer pickup; delivery and pickup must be enabled on the kitchen to be selected
+for a menu.
+
+Owners can edit the kitchen profile, manage and archive dishes, set up pickup
+points, and create or edit dated menus. Pending kitchens can save drafts.
+Publishing requires an approved kitchen and a future order cutoff; approval
+remains in the admin app. Menu forms convert decimal rupees to exact integer
+paise, validate whole portions and actual calendar dates, and send times with
+India's `+05:30` offset. Ready windows may span at most 24 hours, and cutoff may
+equal the ready window's end. Existing published or sold-out menus can still
+receive stock corrections after cutoff.
+
+The server rechecks permissions, active records, pickup-point availability,
+reserved inventory, and publication rules. Client validation improves form
+feedback and never replaces those checks. Production phone verification remains
+required before these development identities can be used for real customers.
+
 ## Development identities and production gate
 
 These profiles use the separate issuer `urn:kitchen:development:phone`.
@@ -247,6 +299,9 @@ Use installed development builds on Android and iOS. Confirm splash → phone
 entry → community selection → app, optional address entry and Account edits,
 existing-member bypass, paginated community selection, relaunch/session
 restoration, logout, disabled development login, and retry after API errors.
+Also check first-use experience choice, switching modes from Account, owner
+setup without an onboarding address, dish and pickup-point management, pending
+kitchen draft saves, approval-gated publication, and menu stock edits.
 Production phone verification and
 the future ZITADEL handoff need separate live tests once implemented. Unit tests
 and JavaScript exports do not replace a device check or prove SMS delivery.

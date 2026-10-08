@@ -1,6 +1,6 @@
 # Hyperlocal Kitchen mobile
 
-One Android/iOS app for residents and kitchen operators. The app opens with a name splash, then a custom phone login/register page. Local development currently skips OTP; production phone authentication is disabled until verification is implemented. After login, users without a community membership choose their community once before opening Discover, Orders, and Account. An address is optional and can be edited from Account. Marketplace screens are still being built. Platform administration stays in the existing web app.
+One Android/iOS app for residents and kitchen operators. The app opens with a name splash, then a custom phone login/register page. Local development currently skips OTP; production phone authentication is disabled until verification is implemented. After login, users without a community membership choose their community once, then choose whether to use the app for meals or their kitchen. An address is optional and can be edited from Account. Kitchen owners can set up their kitchen, dishes, pickup points, and dated menus. Resident ordering screens are still being built. Platform administration stays in the existing web app.
 
 ## Stack and decisions
 
@@ -41,6 +41,14 @@ New residents select an active community, optionally select an active zone, and 
 
 Session restoration checks onboarding before opening protected tabs or deep links. A failed status request displays a retry action. State is scoped to the API origin and signed-in account.
 
+## Meals and kitchen experiences
+
+`GET /api/v1/me/experience` returns the account's saved `mode` and its owned kitchen. New accounts choose `customer` or `kitchen_owner` through `PATCH /api/v1/me/experience`; Account can change that preference later. Existing owners without a saved preference open their kitchen experience automatically. The choice is stored on the server and survives reinstallations. Choosing kitchen mode does not grant ownership or administrative permissions: each API request still checks the account's actual membership and kitchen relationships. An account can own one kitchen.
+
+The Kitchen workspace creates and edits the kitchen profile, including fulfillment settings and optional address, UPI ID, and FSSAI number. An empty address does not block kitchen setup; an existing onboarding address is inherited on creation when no replacement is supplied. New kitchens await platform-admin approval. Owners can manage dishes and save draft menus while pending; publishing requires approval and a future order cutoff. Pickup points require an actual pickup address and remain separate from the optional profile address.
+
+Menu forms use rupees and whole portions, then send exact integer paise and aware India timestamps to the API. Ready windows must end after they start and cover at most 24 hours; orders must close by the window's end. Pickup and delivery choices must be enabled on the kitchen. Backend validation remains authoritative for current eligibility, inventory reservations, cancellation, and ownership. Existing published or sold-out menus support stock corrections after cutoff; editing them does not automatically republish a draft.
+
 ## Generated API models
 
 Run from the repository root after changing a backend schema:
@@ -67,7 +75,7 @@ npx expo install --check
 
 CI checks generated contracts, lint/types, runs mobile tests, and generates both Android and iOS production JavaScript bundles. Bundling does not prove a signed native build or device behaviour. Pre-commit checks mobile lint/types and tests. The root pins the mobile-compatible React/React DOM pair so shared mobile libraries resolve the correct React instance; the admin workspace keeps its own React 19.3 pair. Root overrides keep Reanimated and Worklets on Expo-compatible versions. Upgrade SDKs deliberately, run Expo Doctor, regenerate both native projects, and smoke-test navigation, light/dark themes, large text, sessions, and deep links on both platforms.
 
-Verify the phone login/register/logout and community onboarding loops on real devices, then implement resident ordering. Kitchen-owner capabilities must be authorized by the backend; community creation remains platform-admin only.
+Verify the phone login/register/logout, community onboarding, experience choice, kitchen setup, and draft/publish loops on real devices, then implement resident ordering. Kitchen-owner capabilities must be authorized by the backend; community creation and kitchen approval remain platform-admin only.
 
 ## Dependency audit limitation
 

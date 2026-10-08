@@ -29,6 +29,7 @@ class StrictRequest(BaseModel):
 
 
 ZoneType = Literal["tower", "area", "hostel", "block", "other"]
+AppMode = Literal["customer", "kitchen_owner"]
 
 
 class CommunityZoneCreate(StrictRequest):
@@ -107,6 +108,10 @@ class OnboardingState(BaseModel):
     membership: MembershipOut | None = None
 
 
+class ExperienceUpdate(StrictRequest):
+    mode: AppMode
+
+
 class MembershipAdminOut(MembershipOut):
     user_name: str | None
     phone: str | None
@@ -183,6 +188,11 @@ class KitchenOwnOut(KitchenOut):
     zone_id: UUID | None = None
     address_label: str | None = None
     upi_id: str | None
+
+
+class ExperienceState(BaseModel):
+    mode: AppMode | None = None
+    owned_kitchen: KitchenOwnOut | None = None
 
 
 class KitchenPage(BaseModel):

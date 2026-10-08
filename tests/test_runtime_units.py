@@ -126,7 +126,7 @@ def test_session_dependency_commits_or_rolls_back(monkeypatch, failure):
 @pytest.mark.parametrize(
     "revision,status,code",
     [
-        ("0008_single_kitchen_owner", 200, None),
+        ("0009_user_experience", 200, None),
         ("0007_kitchen_follows", 503, "migration_required"),
         (None, 503, "migration_required"),
     ],

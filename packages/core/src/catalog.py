@@ -6,6 +6,7 @@ from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from kitchen_core.catalog_schemas import (
+    AppMode,
     CommunityCreate,
     CommunityOut,
     CommunityPage,
@@ -16,6 +17,8 @@ from kitchen_core.catalog_schemas import (
     DishCreate,
     DishOut,
     DishUpdate,
+    ExperienceState,
+    ExperienceUpdate,
     KitchenAdminPage,
     KitchenApprove,
     KitchenCreate,
@@ -408,6 +411,35 @@ def complete_onboarding(session: Session, user: User, data: OnboardingComplete) 
         MembershipJoin(zone_id=data.zone_id, address_label=data.address_label),
     )
     return onboarding_state(session, user.id)
+
+
+def experience_state(session: Session, user_id: UUID) -> ExperienceState:
+    user = _get(session, User, user_id)
+    owned = session.scalar(
+        select(Kitchen)
+        .join(KitchenMember, KitchenMember.kitchen_id == Kitchen.id)
+        .where(KitchenMember.user_id == user_id, KitchenMember.role == "owner")
+        .order_by(Kitchen.created_at, Kitchen.id)
+        .limit(1)
+    )
+    mode = cast(AppMode | None, user.preferred_mode)
+    if mode is None and owned is not None:
+        mode = "kitchen_owner"
+    return ExperienceState(
+        mode=mode, owned_kitchen=kitchen_view(session, owned, private=True) if owned else None
+    )
+
+
+def update_experience(session: Session, user: User, data: ExperienceUpdate) -> ExperienceState:
+    user = _locked_active_user(session, user.id)
+    membership = session.scalar(select(Membership.id).where(Membership.user_id == user.id).limit(1))
+    if membership is None:
+        raise DomainError(
+            403, "membership_required", "Join a community before choosing how to use the app."
+        )
+    user.preferred_mode = data.mode
+    session.flush()
+    return experience_state(session, user.id)
 
 
 def list_memberships(
