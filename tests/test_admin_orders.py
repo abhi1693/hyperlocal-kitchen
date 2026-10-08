@@ -278,7 +278,15 @@ def test_every_admin_order_route_retains_admin_auth_before_database(monkeypatch,
     )
     app = configure_app("Admin orders permission contract")
     app.include_router(router, prefix="/api/v1")
-    app.dependency_overrides[get_session] = lambda: pytest.fail("Unauthorized database access")
+
+    # FastAPI resolves the session dependency before require_admin; creating the
+    # lazy session does not connect to PostgreSQL. Fail on actual database use.
+    def unauthorized_query(*args, **kwargs):
+        pytest.fail("Unauthorized database access")
+
+    app.dependency_overrides[get_session] = lambda: SimpleNamespace(
+        scalar=unauthorized_query, get=unauthorized_query, execute=unauthorized_query
+    )
     path = f"/api/v1/orders/{uuid4()}"
     with TestClient(app) as client:
         if guard != "csrf":

@@ -1,0 +1,59 @@
+name: CI
+on:
+  push:
+    branches: [master]
+    tags: ['v*']
+  pull_request:
+  merge_group:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 4 * * 1'
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref_type != 'tag' }}
+jobs:
+  backend:
+    name: Backend
+    uses: ./.github/workflows/tests.yml
+  admin:
+    name: Admin build and generated contracts
+    uses: abhi1693/actions/.github/workflows/node-ci.yml@afba12afb85bf40be9328c92dc53b779f18d5c6d # v1.0.1
+    with:
+      runs-on: ubuntu-24.04-arm
+      node-version: '22'
+      python-version: '3.12'
+      uv-version: '0.12.21'
+      uv-sync-args: '["--all-packages"]'
+      checks: '["generate", "build"]'
+      scripts: '{"generate":"admin:generate","build":"admin:build"}'
+      generated-paths: '["docs/openapi","apps/admin/src/lib/api/generated","apps/admin/src/lib/api/community-type-choices.ts"]'
+      project-env: '{"NEXT_TELEMETRY_DISABLED":"1","KITCHEN_ENVIRONMENT":"test","KITCHEN_COOKIE_SECURE":"false","KITCHEN_DATABASE_URL":"postgresql+psycopg://ci:ci@database.invalid/kitchen_test","KITCHEN_REDIS_URL":"redis://redis.invalid/15","KITCHEN_ADMIN_API_URL":"http://127.0.0.1:13001","KITCHEN_ADMIN_BASE_URL":"http://localhost:3001"}'
+  security:
+    uses: ./.github/workflows/security.yml
+    permissions:
+      contents: read
+      security-events: write
+  containers:
+    name: Verified ARM64 images
+    needs: [backend, admin, security]
+    uses: ./.github/workflows/containers.yml
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    with:
+      publish: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref_type == 'tag') }}
+  required:
+    name: CI required
+    if: ${{ always() }}
+    needs: [backend, admin, security, containers]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require every gate to succeed
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: echo "$RESULTS" | jq -e 'all(.[]; .result == "success")'

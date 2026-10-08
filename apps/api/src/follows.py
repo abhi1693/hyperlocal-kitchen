@@ -21,9 +21,7 @@ Resident = Annotated[User, Depends(require_user)]
 
 
 @router.post("/kitchens/{kitchen_id}/follow", response_model=FollowedKitchenOut)
-def follow(
-    kitchen_id: UUID, session: DB, user: Resident, data: KitchenFollowRequest | None = None
-):
+def follow(kitchen_id: UUID, session: DB, user: Resident, data: KitchenFollowRequest | None = None):
     return follows.follow_kitchen(session, user.id, kitchen_id, data)
 
 

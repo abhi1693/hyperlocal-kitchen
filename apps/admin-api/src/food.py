@@ -136,7 +136,9 @@ def pause_kitchen(kitchen_id: UUID, session: DB, data: KitchenPause = KitchenPau
     operation_id="admin_food_resume_kitchen",
 )
 def resume_kitchen(kitchen_id: UUID, session: DB):
-    return catalog.set_kitchen_accepting_orders(session, None, kitchen_id, accepting=True, admin=True)
+    return catalog.set_kitchen_accepting_orders(
+        session, None, kitchen_id, accepting=True, admin=True
+    )
 
 
 @router.get(

@@ -1,0 +1,21 @@
+{
+  "schema-version": 1,
+  "images": [
+    {
+      "id": "backend",
+      "image": "ghcr.io/abhi1693/hyperlocal-kitchen/backend",
+      "context": ".",
+      "file": "Dockerfile",
+      "platforms": ["linux/arm64"],
+      "smoke-script": ".github/scripts/smoke-image.sh"
+    },
+    {
+      "id": "admin",
+      "image": "ghcr.io/abhi1693/hyperlocal-kitchen/admin",
+      "context": ".",
+      "file": "apps/admin/Dockerfile",
+      "platforms": ["linux/arm64"],
+      "smoke-script": ".github/scripts/smoke-image.sh"
+    }
+  ]
+}

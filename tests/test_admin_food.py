@@ -241,13 +241,19 @@ def test_admin_lists_across_communities_and_archives_and_restores_reusable_dishe
     ).json()
     assert operated["total"] == 1
     assert operated["items"][0]["id"] == str(market["kitchen"].id)
-    assert admin_client.get(
-        "/api/v1/kitchens",
-        params={"user_id": str(market["owner"].id), "community_id": str(market["other"].id)},
-    ).json()["total"] == 0
-    assert admin_client.get(
-        "/api/v1/kitchens", params={"user_id": str(market["resident"].id)}
-    ).json()["total"] == 0
+    assert (
+        admin_client.get(
+            "/api/v1/kitchens",
+            params={"user_id": str(market["owner"].id), "community_id": str(market["other"].id)},
+        ).json()["total"]
+        == 0
+    )
+    assert (
+        admin_client.get("/api/v1/kitchens", params={"user_id": str(market["resident"].id)}).json()[
+            "total"
+        ]
+        == 0
+    )
     response = admin_client.post(
         "/api/v1/dishes",
         json={

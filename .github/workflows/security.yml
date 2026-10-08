@@ -1,0 +1,33 @@
+name: Security
+on:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  security:
+    uses: abhi1693/actions/.github/workflows/security.yml@afba12afb85bf40be9328c92dc53b779f18d5c6d # v1.0.1
+    with:
+      node-version: '22'
+      python-version: '3.12'
+      uv-version: '0.12.21'
+      npm-audit: true
+      python-audit: true
+      python-all-packages: true
+      codeql-languages: '["python","javascript-typescript","actions"]'
+    permissions:
+      contents: read
+      security-events: write
+  compose:
+    name: Compose configuration
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Validate Compose with non-secret values
+        env:
+          POSTGRES_PASSWORD: compose-validation-only
+        run: |
+          docker compose --env-file /dev/null config --quiet
+          docker compose --env-file /dev/null -f compose.yaml -f compose.build.yaml config --quiet

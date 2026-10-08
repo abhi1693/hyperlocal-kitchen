@@ -1,0 +1,24 @@
+name: Containers
+on:
+  workflow_call:
+    inputs:
+      publish:
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  images:
+    uses: abhi1693/actions/.github/workflows/container-images.yml@afba12afb85bf40be9328c92dc53b779f18d5c6d # v1.0.1
+    with:
+      manifest: .github/images.json
+      publish: ${{ inputs.publish }}
+      version-file: pyproject.toml
+      latest: false
+      changed-only: false
+      trusted-branches: '["master"]'
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write

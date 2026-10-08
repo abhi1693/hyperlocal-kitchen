@@ -462,3 +462,36 @@ Integration tests cover concurrent reservations, checkout retries, stock
 release, ownership and community boundaries, onboarding and the order lifecycle.
 Auth tests use RSA-signed tokens from a mocked Zitadel provider with real Redis;
 they do not claim a live sign-in against your Zitadel deployment.
+
+## GitHub Actions
+
+The workflows in `.github/workflows` follow DevFeed's pinned shared-workflow
+pattern. `CI` runs on pull requests, merge queues, pushes to `master`, `v*` tags,
+manual dispatch, and the weekly schedule. Configure branch protection to require
+`CI required`; it fails when any required job fails or is skipped.
+
+- Backend checks run Ruff, formatting, and mypy against the installed workspace
+  packages. Integration tests use disposable PostgreSQL 17 (`kitchen_test`) and
+  Redis 8 (database 15), with explicit test-only OIDC settings. A fresh database
+  upgrade, repeated upgrade, and Alembic schema comparison run before pytest.
+- Admin checks regenerate OpenAPI and Orval output, fail on generated-file drift,
+  and build Next.js with its TypeScript checks. There is currently no frontend
+  unit-test or ESLint suite; the workflow does not claim those checks.
+- Security checks scan Git history for secrets, lint workflows, audit npm and uv
+  dependencies, run extended CodeQL for Python, TypeScript, and Actions, and
+  validate both Compose configurations using non-secret values.
+- Container checks use `.github/images.json` to build the shared backend and
+  standalone admin images on native ARM64 runners. The shared pipeline runs
+  image smoke checks and vulnerability scans, generates SBOMs, and verifies
+  published digests and attestations before promotion.
+
+Image builds start only after backend, admin, and security checks pass. Publishing
+is enabled only for pushes to `master` and version tags; PRs, merge queues,
+scheduled runs, and manual runs only validate images. GHCR uses the repository's
+`GITHUB_TOKEN` with job-scoped package write permission. Existing packages must
+allow this repository to publish. Tags must match the version in `pyproject.toml`.
+The pipeline does not update home-lab GitOps manifests or deploy the application.
+
+Configure GitHub CodeQL as **advanced setup** to use these workflows. Use the
+uploaded test reports, security reports, SBOMs, and image manifests to review a
+run; a local check alone does not prove that the remote pipeline passed.

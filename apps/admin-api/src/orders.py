@@ -156,9 +156,7 @@ def confirm_payment(order_id: UUID, session: DB, admin: Admin):
     response_model=PrepSummary,
     operation_id="admin_kitchen_prep_summary",
 )
-def kitchen_prep_summary(
-    kitchen_id: UUID, on: Annotated[date, Query(alias="date")], session: DB
-):
+def kitchen_prep_summary(kitchen_id: UUID, on: Annotated[date, Query(alias="date")], session: DB):
     return service.prep_summary(session, None, kitchen_id, on, admin=True)
 
 
