@@ -46,6 +46,8 @@ jobs:
       attestations: write
     with:
       publish: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref_type == 'tag') }}
+    secrets:
+      ghcr-token: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref_type == 'tag') && secrets.GHCR_TOKEN || '' }}
   required:
     name: CI required
     if: ${{ always() }}

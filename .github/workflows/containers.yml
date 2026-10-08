@@ -5,6 +5,10 @@ on:
       publish:
         type: boolean
         default: false
+    secrets:
+      ghcr-token:
+        description: Optional credential for existing GHCR packages without repository access.
+        required: false
 permissions:
   contents: read
 jobs:
@@ -22,3 +26,5 @@ jobs:
       packages: write
       id-token: write
       attestations: write
+    secrets:
+      github-token: ${{ inputs.publish && secrets.ghcr-token || github.token }}

@@ -489,7 +489,10 @@ Image builds start only after backend, admin, and security checks pass. Publishi
 is enabled only for pushes to `master` and version tags; PRs, merge queues,
 scheduled runs, and manual runs only validate images. GHCR uses the repository's
 `GITHUB_TOKEN` with job-scoped package write permission. Existing packages must
-allow this repository to publish. Tags must match the version in `pyproject.toml`.
+allow this repository to publish. For existing private packages without repository
+access, the optional repository secret `GHCR_TOKEN` overrides registry authentication
+only on trusted publishing pushes; PRs and validation runs receive no such secret.
+Tags must match the version in `pyproject.toml`.
 The pipeline does not update home-lab GitOps manifests or deploy the application.
 
 Configure GitHub CodeQL as **advanced setup** to use these workflows. Use the
