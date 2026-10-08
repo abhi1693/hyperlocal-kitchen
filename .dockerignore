@@ -14,3 +14,6 @@ reports
 **/node_modules
 **/.next
 **/*.tsbuildinfo
+# Local service configuration must never enter nested build contexts.
+**/.env
+**/.env.*

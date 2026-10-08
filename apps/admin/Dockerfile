@@ -9,6 +9,10 @@ COPY apps/admin apps/admin
 RUN npm run admin:build
 
 FROM node:22-alpine AS runtime
+# The standalone server needs Node.js, not package managers or their dependencies.
+RUN rm -rf /usr/local/lib/node_modules /opt/yarn-* \
+    && rm -f /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack \
+        /usr/local/bin/yarn /usr/local/bin/yarnpkg
 WORKDIR /app
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 HOSTNAME=0.0.0.0 PORT=3000
 COPY --from=builder --chown=node:node /app/apps/admin/.next/standalone ./

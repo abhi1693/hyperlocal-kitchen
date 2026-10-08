@@ -498,3 +498,9 @@ The pipeline does not update home-lab GitOps manifests or deploy the application
 Configure GitHub CodeQL as **advanced setup** to use these workflows. Use the
 uploaded test reports, security reports, SBOMs, and image manifests to review a
 run; a local check alone does not prove that the remote pipeline passed.
+
+The backend image uses Python 3.12 on Alpine 3.23; locked native Python
+wheels must support musl on ARM64. The admin runtime contains Node.js and the
+standalone Next.js output, with package managers kept in the build stage.
+Image smoke checks verify native backend imports and non-root execution.
+Nested local `.env` files are excluded from every Docker build context.
