@@ -554,3 +554,14 @@ Nested local `.env` files are excluded from every Docker build context.
 ## Mobile app
 
 The Android/iOS Expo app lives in `apps/mobile`. It opens with a name splash and offers a custom phone login/register page. OTP is temporarily skipped only when development phone login is enabled. Ordering screens are still being built. See [mobile setup and stack decisions](apps/mobile/README.md) for development builds, checks, and maintenance.
+
+## Patch 0.1.1 preparation
+
+Refresh the Python and JavaScript dependency locks and migrate the mobile application to Expo SDK 58
+and React Native 0.88. The admin uses Next.js 16.4.2. Rebuild Android/iOS development clients after
+the SDK upgrade; existing SDK 57 clients cannot run the new native dependency graph. This change
+prepares source packages and contracts without publishing images or changing deployed replicas.
+
+The mobile SDK's React 19.3.0/TypeScript 6.0.3 compatibility pins and the upstream-unpatched Expo
+code-signing dependency are documented in [mobile maintenance](apps/mobile/README.md#dependency-compatibility-and-audit).
+The required security check remains enabled; this patch is not ready to release while that finding remains.

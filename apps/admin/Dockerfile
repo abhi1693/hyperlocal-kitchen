@@ -3,6 +3,7 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY package.json package-lock.json ./
+COPY packages/braces packages/braces
 COPY apps/admin/package.json apps/admin/package.json
 RUN --mount=type=cache,target=/root/.npm npm ci --ignore-scripts --no-audit --no-fund
 COPY apps/admin apps/admin

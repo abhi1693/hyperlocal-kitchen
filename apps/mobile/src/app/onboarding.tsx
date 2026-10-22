@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ComponentRef } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useInfiniteQuery } from "@tanstack/react-query";
@@ -22,7 +22,7 @@ import { validAddress } from "../onboarding/state";
 
 export default function OnboardingScreen() {
   const theme = useTheme();
-  const scroll = useRef<ScrollView>(null);
+  const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
   const { api, origin, user, signOut, busy, error: authError } = useAuth();
   const { complete, saving } = useOnboarding();
   const [step, setStep] = useState<"community" | "address">("community");

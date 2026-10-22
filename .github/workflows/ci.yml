@@ -49,6 +49,7 @@ jobs:
           npm run generate --workspace @kitchen/mobile
           git diff --exit-code -- apps/mobile/src/api/generated
           test -z "$(git ls-files --others --exclude-standard -- apps/mobile/src/api/generated)"
+      - run: npm run test:dependency-security
       - run: npm run mobile:lint
       - run: npm run mobile:typecheck
       - run: npm run mobile:test

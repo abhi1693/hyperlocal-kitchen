@@ -28,6 +28,12 @@ repos:
         pass_filenames: false
         always_run: true
         require_serial: true
+      - id: dependency-security
+        name: Bounded brace parser regression tests
+        entry: npm run test:dependency-security
+        language: system
+        pass_filenames: false
+        files: ^(packages/braces/|tests/braces\.test\.cjs$|package(-lock)?\.json$)
       - id: admin-types
         name: Admin TypeScript checks
         entry: npm run admin:typecheck

@@ -1,11 +1,11 @@
 [project]
 name = "kitchen-worker"
-version = "0.1.0"
+version = "0.1.1"
 requires-python = ">=3.12"
 dependencies = ["kitchen-core"]
 
 [build-system]
-requires = ["setuptools>=80"]
+requires = ["setuptools>=84.2.1"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.package-dir]
