@@ -22,9 +22,9 @@ jobs:
     uses: abhi1693/actions/.github/workflows/node-ci.yml@afba12afb85bf40be9328c92dc53b779f18d5c6d # v1.0.1
     with:
       runs-on: ubuntu-24.04-arm
-      node-version: '22'
+      node-version: '26.12.1'
       python-version: '3.12'
-      uv-version: '0.12.21'
+      uv-version: '0.13.5'
       uv-sync-args: '["--all-packages"]'
       checks: '["generate", "build"]'
       scripts: '{"generate":"admin:generate","build":"admin:build"}'
@@ -41,7 +41,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
-          node-version: '24'
+          node-version: '26.12.1'
           cache: npm
       - run: npm ci
       - name: Generate mobile API models and check committed contracts

@@ -1,6 +1,6 @@
-FROM python:3.12-alpine3.23
+FROM python:3.12.15-alpine3.24@sha256:b658b05ce9c4eb97ec6fc19424818a1f31993659c2b505a532f470e83807815d
 ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 UV_LINK_MODE=copy
-RUN pip install --no-cache-dir uv==0.12.21
+RUN pip install --no-cache-dir uv==0.13.5
 WORKDIR /app
 COPY pyproject.toml uv.lock ./
 COPY packages/ packages/
