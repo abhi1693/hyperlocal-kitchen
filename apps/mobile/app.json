@@ -2,7 +2,7 @@
   "expo": {
     "name": "Hyperlocal Kitchen",
     "slug": "hyperlocal-kitchen",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "scheme": "hyperlocal-kitchen",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
@@ -33,9 +33,6 @@
     "experiments": {
       "typedRoutes": true
     },
-    "platforms": [
-      "android",
-      "ios"
-    ]
+    "platforms": ["android", "ios"]
   }
 }

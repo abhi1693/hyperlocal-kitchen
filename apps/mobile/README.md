@@ -4,7 +4,7 @@ One Android/iOS app for residents and kitchen operators. The app opens with a na
 
 ## Stack and decisions
 
-- Expo SDK 57 (stable), React Native 0.86, React 19.2, strict TypeScript. Use `npx expo install` from this directory for SDK-compatible native dependency versions.
+- Expo SDK 58 (stable), React Native 0.88, React 19.3, strict TypeScript. Use `npx expo install` from this directory for SDK-compatible native dependency versions.
 - Expo Router for file-based navigation and the `hyperlocal-kitchen` deep-link scheme already expected by the backend.
 - React Native Paper 5 for accessible Material 3 components. Central light/dark themes use warm food-oriented colours. Paper offers a complete form/dialog/card toolkit without introducing a second styling compiler. Gluestack/NativeWind and Tamagui are alternatives when custom utility styling or universal web/native sharing becomes a requirement; this app does not currently need that complexity.
 - TanStack Query for server state, with foreground and connectivity integration. Mutations are never automatically retried; checkout must use the backend idempotency contract when implemented.
@@ -77,6 +77,24 @@ CI checks generated contracts, lint/types, runs mobile tests, and generates both
 
 Verify the phone login/register/logout, community onboarding, experience choice, kitchen setup, and draft/publish loops on real devices, then implement resident ordering. Kitchen-owner capabilities must be authorized by the backend; community creation and kitchen approval remain platform-admin only.
 
-## Dependency audit limitation
+## Dependency compatibility and audit
 
-The SDK 57 and Jest dependency audit on 2026-10-08 reports 68 affected packages (53 high, 15 moderate), cascading from advisories in `braces`, `decode-uri-component`, `node-forge`, `sprintf-js`, and `uuid`. Several have no patched version published; other fixes require incompatible module changes or major transitive overrides. Automatic forced fixes propose obsolete Expo/React Native downgrades. The repository security gate remains enabled; a clean audit is not claimed. Revisit these advisories as upstream releases arrive and before distribution.
+SDK 58 uses React 19.3.0 and TypeScript 6.0.3. Keep the mobile/root React pair and the mobile
+TypeScript compiler on Expo's supported versions; the independent admin workspace uses the current
+React release. Both workspaces retain TypeScript 6.0.3 because the current ESLint parser supports
+versions below 6.1; TypeScript 7 hoisting breaks its runtime API. ESLint stays on the current
+plugin-compatible 9.39.5 release until the Expo/Next lint plugins support ESLint 10. `npx expo install --check` verifies the SDK contract. SDK 58 takes
+initial navigation from the URL: the index route selects login, onboarding, the experience chooser,
+or the appropriate kitchen/customer screen. The stack's anchor preserves the back destination for
+deep links. Rebuild development clients after upgrading from SDK 57.
+
+The 2026-10-23 full and production npm audits each report four high-severity dependency-chain entries
+from [node-forge signature verification](https://github.com/advisories/GHSA-86w9-cpqp-85rv). The current
+node-forge 1.4.0 release has no published fix. The path is Expo's CLI/code-signing certificate tooling,
+not an application import; JavaScript bundle success does not make this native build-tool risk safe.
+The required security gate stays enabled, and the update remains a draft until upstream provides a
+reviewed fix. No obsolete Expo downgrade, crypto fork, or advisory suppression is used.
+
+The workspace reuses DevFeed's existing MIT-licensed, depth-limited braces implementation, with
+malicious-input and ordinary-glob regression tests run by CI and pre-commit. See
+[its security notes](../../../packages/braces/SECURITY.md).

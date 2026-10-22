@@ -6,7 +6,6 @@ export default function TabLayout() {
   const { state } = useExperience();
   return (
     <Tabs
-      initialRouteName={state?.mode === "kitchen_owner" ? "kitchen" : "discover"}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: theme.colors.primary,

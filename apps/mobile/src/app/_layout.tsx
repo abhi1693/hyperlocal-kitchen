@@ -8,6 +8,7 @@ import { OnboardingProvider, useOnboarding } from "../onboarding/provider";
 import { OnboardingGate } from "../components/onboarding-gate";
 import { ExperienceProvider, useExperience } from "../experience/provider";
 import { ExperienceGate } from "../experience/gate";
+export const unstable_settings = { anchor: "index" };
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
 function Routes() {
   const { user, loading } = useAuth();
@@ -27,7 +28,7 @@ function Routes() {
   if (user && !state) return <OnboardingGate />;
   if (user && state?.completed && !experience) return <ExperienceGate />;
   return (
-    <Stack initialRouteName="index" screenOptions={{ headerShown: false }}>
+    <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
       <Stack.Protected guard={!user}>
         <Stack.Screen name="login" />

@@ -1,6 +1,6 @@
 [project]
 name = "hyperlocal-kitchen"
-version = "0.1.0"
+version = "0.1.1"
 description = "Private hyperlocal food marketplace for communities"
 requires-python = ">=3.12"
 dependencies = []
@@ -30,12 +30,12 @@ dev = [
     "kitchen-api",
     "kitchen-admin-api",
     "kitchen-worker",
-    "pytest>=8.3,<10",
-    "ruff>=0.12,<1",
-    "mypy>=1.15,<3",
-    "httpx>=0.28,<1",
-    "pre-commit>=4.3,<5",
-    "pytest-cov>=6,<8",
+    "pytest>=9.1.1,<10",
+    "ruff>=0.17.2,<1",
+    "mypy>=2.4.0,<3",
+    "httpx>=0.28.1,<1",
+    "pre-commit>=4.7.0,<5",
+    "pytest-cov>=7.1.0,<8",
 ]
 
 [tool.ruff]
